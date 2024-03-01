@@ -1,0 +1,6 @@
+# Anything under feature_visualization_JupyterNotebook is 
+# actually executed results and data
+/feature_visualization_JupyterNotebook
+
+# Anything pycache (cached python files) is ignored
+*/__pycache__
