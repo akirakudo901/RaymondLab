@@ -15,8 +15,10 @@ import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from skimage.draw import disk, line_aa
+from skimage.draw import disk
 from tqdm import tqdm
+
+from preprocessing import adp_filt_bsoid_style, extract_label_from_labeled_csv, replace_one_length_frame_with_matching_neighbors
 
 # Given an image and corresponding coordinates for bodyparts, renders 
 # the bodyparts onto the image, to be returned.
@@ -97,7 +99,7 @@ def create_labeled_behavior_bits(labels,
     :param choose_from_top_or_random: Whether to choose 'counts' groups at random or from the 
     top N 'counts' in terms of length. If not "random", chooses the top 'counts'.
     """
-    print(f"Generating video snippets for: {data_csv_path}")
+    print(f"Generating video snippets for: |{os.path.basename(data_csv_path)}| under {data_csv_path}.")
     if not os.path.exists(output_path):
         os.mkdir(output_path)
     subfolder = os.path.join(output_path, "random_n" if choose_from_top_or_random == "random" else "top_n")
@@ -214,36 +216,6 @@ def repeating_numbers(labels):
         i = i + 1
     return n_list, idx, lengths
 
-def extract_label_from_labeled_csv(labeled_csv_path):
-    df = pd.read_csv(labeled_csv_path, low_memory=False)
-    labels = df.loc[:,'B-SOiD labels'].iloc[2:].to_numpy()
-    return labels
-
-def adp_filt_bsoid_style(datax, datay, data_lh, brute_thresholding=False):
-    datax_filt, datay_filt = np.zeros_like(datax), np.zeros_like(datay)
-    
-    for x in tqdm(range(data_lh.shape[1])):
-        a, b = np.histogram(data_lh[1:, x].astype(np.float32))
-        rise_a = np.where(np.diff(a) >= 0)
-        if rise_a[0][0] > 1:
-            llh = b[rise_a[0][0]]
-        else:
-            llh = b[rise_a[0][1]]
-        ##################
-        # ADDED BY AKIRA
-        if brute_thresholding:
-          llh = 0.8
-        ##################
-        data_lh_float = data_lh[:, x].astype(np.float32)
-        datax_filt[0, x], datay_filt[0, x] = datax[0, x], datay[0, x]
-        for i in range(1, data_lh.shape[0]):
-            if data_lh_float[i] < llh:
-                datax_filt[i, x], datay_filt[i, x] = datax_filt[i - 1, x], datay_filt[i - 1, x]
-            else:
-                datax_filt[i, x], datay_filt[i, x] = datax[i, x], datay[i, x]
-    datax_filt = np.array(datax_filt).astype(np.float32)
-    datay_filt = np.array(datay_filt).astype(np.float32)
-    return datax_filt, datay_filt
 
 if __name__ == "__main__":
     FPS = 40
@@ -262,22 +234,26 @@ if __name__ == "__main__":
     FILE_OF_INTEREST = r"20220228203032_316367_m2_openfieldDLC_resnet50_Q175-D2Cre Open Field Males BrownJan12shuffle1_500000.csv"
     LABELED_PREFIX = r"Feb-27-2024labels_pose_40Hz"
 
-    OUTPUT_FOLDER = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\previous\B-SOID STUFF\BoutVideoBits\labeled"
+    OUTPUT_FOLDER = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\previous\B-SOID STUFF\BoutVideoBits\labeled_one_length_bout_filtered"
+    # OUTPUT_FOLDER = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\previous\B-SOID STUFF\BoutVideoBits\labeled"
     
     FRAME_DIR     = os.path.join(r"D:\B-SOID\Leland B-SOID YAC128 Analysis\Q175\WT\csv\pngs", FILE_OF_INTEREST.replace(".csv", ""))
     OUTPUT_PATH   = os.path.join(OUTPUT_FOLDER, FILE_OF_INTEREST.replace(".csv", ""))
     DATA_CSV_PATH = os.path.join(r"D:\B-SOID\Leland B-SOID YAC128 Analysis\Q175\WT\csv",      FILE_OF_INTEREST)
     LABELED_CSV_PATH = os.path.join(r"D:\B-SOID\Leland B-SOID YAC128 Analysis\Q175\WT\csv\BSOID\Feb-27-2024", 
                                     LABELED_PREFIX + FILE_OF_INTEREST)
+    
 
     labels = extract_label_from_labeled_csv(LABELED_CSV_PATH)
 
-    create_labeled_behavior_bits(labels=labels, 
+    filtered = replace_one_length_frame_with_matching_neighbors(labels)
+
+    create_labeled_behavior_bits(labels=filtered, 
                                  crit=MIN_DESIRED_BOUT_LENGTH / FPS, 
-                                 counts=COUNTS, 
+                                 counts=COUNTS,
                                  output_fps=OUTPUT_FPS, 
-                                 frame_dir=FRAME_DIR, 
-                                 output_path=OUTPUT_PATH, 
+                                 frame_dir=FRAME_DIR,
+                                 output_path=OUTPUT_PATH,
                                  data_csv_path=DATA_CSV_PATH,
                                  dotsize=DOTSIZE,
                                  colormap=COLORMAP,
