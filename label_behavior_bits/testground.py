@@ -60,29 +60,58 @@
 # cv2.waitKey(0)
 
 import os
+import time
 
 import matplotlib.pyplot as plt
 import numpy as np
 
-from preprocessing import extract_label_from_labeled_csv, replace_one_length_frame_with_matching_neighbors
+from preprocessing import extract_label_from_labeled_csv, filter_bouts_smaller_than_N_frames, replace_one_length_frame_with_matching_neighbors
+from create_labeled_behavior_bits import repeating_numbers
 
-FILE_OF_INTEREST = r"20220228203032_316367_m2_openfieldDLC_resnet50_Q175-D2Cre Open Field Males BrownJan12shuffle1_500000.csv"
+FILE_OF_INTEREST = r"20220228223808_320151_m1_openfieldDLC_resnet50_Q175-D2Cre Open Field Males BrownJan12shuffle1_500000.csv"
+# r"20220228203032_316367_m2_openfieldDLC_resnet50_Q175-D2Cre Open Field Males BrownJan12shuffle1_500000.csv"
 LABELED_PREFIX = r"Feb-27-2024labels_pose_40Hz"
 
 LABELED_CSV_PATH = os.path.join(r"D:\B-SOID\Leland B-SOID YAC128 Analysis\Q175\WT\csv\BSOID\Feb-27-2024", 
                                 LABELED_PREFIX + FILE_OF_INTEREST)
 
-START, DURATION = 0, 30
+START, DURATION = 3810, 150
 END = START + DURATION
 
 labels = extract_label_from_labeled_csv(LABELED_CSV_PATH)
-filtered_labels = replace_one_length_frame_with_matching_neighbors(labels)
+# filtered_labels = replace_one_length_frame_with_matching_neighbors(labels)
+print("Filtering ...")
+filtered_labels = filter_bouts_smaller_than_N_frames(labels, n=5)
+print("Done!")
 
-print(np.where(filtered_labels==9)[0][:10])
 
-# fig, ax = plt.subplots()
-# ax.step(range(START, END),          labels[START:END], label= "Pre-filtering", color='g')
-# ax.step(range(START, END), filtered_labels[START:END], label="Post-filtering", color='b')
-# ax.legend()
-# plt.grid(visible=True)
-# plt.show()
+pre_n_list, pre_idx, pre_lengths = repeating_numbers(labels)
+max_length = 11
+print(f"pre-filtering number of 1-length bouts: {np.count_nonzero(np.array(pre_lengths) == 1)}")
+for i in range(2, max_length):
+    print(f"number of {i}-length bouts: {np.count_nonzero(np.array(pre_lengths) == i)}")
+
+print(f"average bout length pre-merge: {np.mean(np.array(pre_lengths))}")
+
+n_list, idx, lengths = repeating_numbers(filtered_labels)
+print(f"\npost-filtering number of 1-length bouts: {np.count_nonzero(np.array(lengths) == 1)}")
+for i in range(2, max_length):
+    print(f"number of {i}-length bouts: {np.count_nonzero(np.array(lengths) == i)}")
+print(f"average bout length post-merge: {np.mean(np.array(lengths))}")
+
+# n_list, idx, lengths = np.array(n_list), np.array(idx), np.array(lengths)
+
+# i = 9
+# where_label_i_is = np.where(n_list==i)
+# label_i_lengths = lengths[where_label_i_is[0]]
+# label_i_idx = idx[where_label_i_is[0]]
+
+# label_i_max = np.max(label_i_lengths)
+# print(label_i_idx[label_i_lengths == label_i_max])
+
+fig, ax = plt.subplots()
+ax.step(range(START, END),          labels[START:END], label= "Pre-filtering", color='g')
+ax.step(range(START, END), filtered_labels[START:END], label="Post-filtering", color='b')
+ax.legend()
+plt.grid(visible=True)
+plt.show()

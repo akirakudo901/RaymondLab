@@ -88,17 +88,44 @@ def replace_one_length_frame_with_matching_neighbors(label : np.ndarray):
     return forward
 
 def filter_bouts_smaller_than_N_frames(label : np.ndarray, 
-                                       n : int, 
-                                       windowsize : int):
+                                       n : int):
     """
-    Filters for bouts that are shorter than n frames in length, 
-    replacing them with the majority label in the neighboring
-    frames. Considered neighbors are 'windowsize' frames centered
-    around the frame in question, e.g. 2 frames to both sides if 
-    windowsize = 5.
+    For all i between 1 and n inclusive, replaces i length bouts 
+    with the labels of its neighbors, if both of its i neighbors 
+    (left and right) all agree in label.
+    The process is ran starting from 1, and from both ends of 
+    the array, where for each run, only those labels that agree 
+    from both sides are actually filtered.
     :param np.ndarray label: Label to filter.
     :param int n: Largest bout length to consider for replacement.
-    :param int windowsize: Size of window centered at the current 
-    bout used to replace a bout.
     """
-    # TODO
+    
+    for boutlength in range(1, n+1):
+        forward, backward = label.copy(), label.copy()
+        # forward check; window for boutlength = 2 will be like:
+        # -|-||x|x|0|o|x|x||-|- where: windowcenter = 0,
+        # p1 = first two xs, p3 = last two xs and
+        # all of p2 (0 and o) are replaced if all xs match.
+        for windowcenter in range(boutlength, len(forward) - boutlength):
+            p1_start, p1_end = windowcenter - boutlength, windowcenter
+            p2_start, p2_end = windowcenter             , windowcenter + boutlength
+            p3_start, p3_end = windowcenter + boutlength, windowcenter + 2 * boutlength
+            # if all surrounding entries have the same entry
+            if np.all(forward[p1_start] == forward[p1_start : p1_end]) and \
+               np.all(forward[p1_start] == forward[p3_start : p3_end]):
+                forward[p2_start : p2_end] = forward[p1_start : p1_end]
+        # backward check
+        for windowcenter in range(len(forward) - boutlength - 1, boutlength - 1, -1):
+            p1_start, p1_end = windowcenter + 1                 , windowcenter + boutlength + 1
+            p2_start, p2_end = windowcenter - boutlength + 1    , windowcenter + 1
+            p3_start, p3_end = windowcenter - 2 * boutlength + 1, windowcenter - boutlength + 1
+            # if all surrounding entries have the same entry
+            if np.all(backward[p1_start] == backward[p1_start : p1_end]) and \
+               np.all(backward[p1_start] == backward[p3_start : p3_end]):
+                backward[p2_start : p2_end] = backward[p1_start : p1_end]
+        # replace 'forward' content with label content where forward[x] != backward[x]
+        unmatch = forward != backward
+        forward[unmatch] = label[unmatch]
+        # go to the next iteration, treating current 'forward' as label
+        label = forward
+    return label
