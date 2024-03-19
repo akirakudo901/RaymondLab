@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
-from preprocessing import adp_filt_bsoid_style
+from .preprocessing import adp_filt_bsoid_style
 
 BRUTE_THRESHOLDING = False
 FILE_OF_INTEREST = r"20220228203032_316367_m2_openfieldDLC_resnet50_Q175-D2Cre Open Field Males BrownJan12shuffle1_500000.csv"

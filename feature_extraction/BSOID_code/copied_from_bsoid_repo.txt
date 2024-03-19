@@ -1,0 +1,6 @@
+All code in this folder were directly copied from the B-SOID repo, found:
+https://github.com/YttriLab/B-SOID?tab=readme-ov-file
+Version 2.0 on 2024/03/19.
+
+If this repository came to be used publicly, I will make sure to attribute the
+code the correct way!

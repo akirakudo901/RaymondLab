@@ -18,7 +18,7 @@ import pandas as pd
 from skimage.draw import disk
 from tqdm import tqdm
 
-from preprocessing import adp_filt_bsoid_style, extract_label_from_labeled_csv, filter_bouts_smaller_than_N_frames
+from .preprocessing import adp_filt_bsoid_style, extract_label_from_labeled_csv, filter_bouts_smaller_than_N_frames
 
 # Given an image and corresponding coordinates for bodyparts, renders 
 # the bodyparts onto the image, to be returned.
@@ -91,7 +91,7 @@ def create_labeled_behavior_bits(labels,
     """
     :param labels: 1D array, labels from training or testing
     :param crit: scalar, minimum duration for random selection of behaviors (~300ms is advised)
-    :param counts: scalar, number of randomly generated examples (~5 is advised)
+    :param counts: scalar, number of generated examples (~5 is advised)
     :param output_fps: integer, frame per second for the output video
     :param frame_dir: string, directory to where you extracted vid images
     :param output_path: string, directory to where you want to store short video examples
