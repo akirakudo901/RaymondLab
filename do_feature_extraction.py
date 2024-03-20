@@ -6,15 +6,15 @@ import os
 
 from feature_extraction.extract_label_and_feature_from_csv import extract_label_and_feature_from_csv
 
-POSE = list(range(21)) # <- 3 (x,y,lhl) columns x 6 body parts = 21 columns
+POSE = list(range(3*6)) # <- 3 (x,y,lhl) columns x 6 body parts
 # 6 bodyparts: snout, rightfrontpaw, leftfrontpaw, righthindpaw, lefthindpaw, tailbase; [belly]
 
-CLFPATH = r"Z:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\RaymondLab\feature_visualization_JupyterNotebook\data" + \
+CLFPATH = r".\feature_visualization_JupyterNotebook\data" + \
           r"\sav\Leland_Feb232023_network\Feb-23-2023_randomforest.sav"
 
 SAVEPATH = "./feature_extraction/results"
 
-ABOVE_CSV_HOLDIND_FOLDERS = r"Z:\Raymond Lab\2 Colour D1 D2 Photometry Project\B-SOID\YAC128 Open Field CSVs"
+ABOVE_CSV_HOLDIND_FOLDERS = r"..\..\B-SOID\YAC128 Open Field CSVs"
 CSV_HOLDING_FOLDERS = [os.path.join(ABOVE_CSV_HOLDIND_FOLDERS, "WT"),
                        os.path.join(ABOVE_CSV_HOLDIND_FOLDERS, "YAC128")]
 
