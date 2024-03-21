@@ -216,7 +216,6 @@ def repeating_numbers(labels):
         i = i + 1
     return n_list, idx, lengths
 
-
 if __name__ == "__main__":
     FPS = 40
     FILTERING_NOISE_MAX_LENGTH = 5 # max length of noise filtered via filter_bouts_smaller_than_N_frames
@@ -249,7 +248,7 @@ if __name__ == "__main__":
 
     labels = extract_label_from_labeled_csv(LABELED_CSV_PATH)
 
-    print("Pre-fintering...")
+    print("Pre-filtering...")
     filtered = filter_bouts_smaller_than_N_frames(labels, n=FILTERING_NOISE_MAX_LENGTH)
     print("Done!")
 
