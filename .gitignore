@@ -1,7 +1,3 @@
-# Anything pycache (cached python files) is ignored
-__pycache__/
-
-
 #################
 # BSOID_related #
 #################
@@ -11,4 +7,4 @@ __pycache__/
 /feature_visualization_JupyterNotebook
 
 # Anything under feature_extraction/results is not saved on git
-feature_extraction/results
+/feature_extraction/results
