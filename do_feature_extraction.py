@@ -21,7 +21,7 @@ CSV_HOLDING_FOLDERS = [os.path.join(ABOVE_CSV_HOLDIND_FOLDERS, "WT"),
 for csv_holding_folder in CSV_HOLDING_FOLDERS:
     print(f"Processing folder: {os.path.basename(csv_holding_folder)}!")
     for filepath in os.listdir(csv_holding_folder):
-        print(f"- {filepath} ... ", end="")
+        print(f"- {filepath} ... ")
         csvpath = os.path.join(csv_holding_folder, filepath)
         extract_label_and_feature_from_csv(filepath=csvpath, 
                                         pose=POSE,

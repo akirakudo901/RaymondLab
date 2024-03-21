@@ -18,6 +18,7 @@ import pandas as pd
 from .BSOID_code.adp_filt import adp_filt
 from .BSOID_code.bsoid_extract import bsoid_extract
 from .BSOID_code.bsoid_predict import bsoid_predict
+from .utils import Bodypart, generate_guessed_map_of_feature_to_data_index
 
 FEATURE_SAVING_FOLDERS = "./B-SOID_features/results/features"
 FEATURE_FILE_SUFFIX = "_features.npy"
@@ -30,85 +31,109 @@ def extract_label_and_feature_from_csv(filepath : str, pose : List[int],
                                        brute_thresholding=False, threshold=0.8,
                                        save_result=True, save_path=FEATURE_SAVING_FOLDERS,
                                        recompute=False,  load_path=FEATURE_SAVING_FOLDERS):
-  """
-  Given the path to a csv name to be analyzed, extracts and computes both the
-  labels and features from it. Does check if previous computations have been
-  made for both the labels and features, and if it finds both, will skip
-  computation (unless instructed to recompute).
-  :param str filepath: Path to csv file to be analyzed.
-  :param List[int] pose: A list of indices relative to the csv that specifies
-  which body part to use for computation. e.g. [0,1,2,6,7,8] will use those
-  columns with those indices for computation.
-  :param str clf_path: The path to the classifier-stored sav file, often
-  called 'PREFIX_randomforest.sav'.
-  :param int fps: Framerate for video. Defaults to 40, given Ellen's project.
-  :param bool brute_thresholding: Whether to use brute (vs. adaptive) thresholding when 
-  preprocessing DLC output based on likelihood pre-feature-extraction. Defaults to False.
-  :param float threshold: Threshold to use when brute_thresholding is true. Defaults to 0.8.
-  :param bool save_result: Whether to save the computed features under
-  save_path. Defaults to true.
-  :param str save_path: The folder to which we save computed features.
-  Defaults to FEATURE_SAVING_FOLDERS.
-  :param bool recompute: Whether to recompute features saved under load_path.
-  :param str load_path: The path from which we attempt to load precomputed
-  features. Defaults to FEATURE_SAVING_FOLDERS.
-  """
+    """
+    Given the path to a csv name to be analyzed, extracts and computes both the
+    labels and features from it. Does check if previous computations have been
+    made for both the labels and features, and if it finds both, will skip
+    computation (unless instructed to recompute).
+    :param str filepath: Path to csv file to be analyzed.
+    :param List[int] pose: A list of indices relative to the csv that specifies
+    which body part to use for computation. e.g. [0,1,2,6,7,8] will use those
+    columns with those indices for computation.
+    :param str clf_path: The path to the classifier-stored sav file, often
+    called 'PREFIX_randomforest.sav'.
+    :param int fps: Framerate for video. Defaults to 40, given Ellen's project.
+    :param bool brute_thresholding: Whether to use brute (vs. adaptive) thresholding when 
+    preprocessing DLC output based on likelihood pre-feature-extraction. Defaults to False.
+    :param float threshold: Threshold to use when brute_thresholding is true. Defaults to 0.8.
+    :param bool save_result: Whether to save the computed features under
+    save_path. Defaults to true.
+    :param str save_path: The folder to which we save computed features.
+    Defaults to FEATURE_SAVING_FOLDERS.
+    :param bool recompute: Whether to recompute features saved under load_path.
+    :param str load_path: The path from which we attempt to load precomputed
+    features. Defaults to FEATURE_SAVING_FOLDERS.
+    """
 
-  filename = os.path.basename(filepath)
-  clfname = os.path.basename(clf_path).replace('_randomforest.sav', '')
-  feature_save_filename = clfname + "_" + filename + FEATURE_FILE_SUFFIX
-  label_save_filename   = clfname + "_" + filename + LABEL_FILE_SUFFIX
+    filename = os.path.basename(filepath)
+    clfname = os.path.basename(clf_path).replace('_randomforest.sav', '')
+    feature_save_filename = clfname + "_" + filename + FEATURE_FILE_SUFFIX
+    label_save_filename   = clfname + "_" + filename + LABEL_FILE_SUFFIX
 
-  if not recompute:
-    # attempt fetch
-    feature = fetch_precomputed_from_npy(os.path.join(load_path, feature_save_filename))
-    label   = fetch_precomputed_from_npy(os.path.join(load_path,   label_save_filename))
-    # if it doesn't work, recompute
-    if feature is None or label is None: recompute = True
+    if not recompute:
+        # attempt fetch
+        feature = fetch_precomputed_from_npy(os.path.join(load_path, feature_save_filename))
+        label   = fetch_precomputed_from_npy(os.path.join(load_path,   label_save_filename))
+        # if it doesn't work, recompute
+        
+        if feature is None or label is None: recompute = True
 
-  if recompute:
-    # read data from csv and filter data
-    file_j_df = pd.read_csv(filepath, low_memory=False)
-    file_j_processed, _ = adp_filt(file_j_df, pose, brute_thresholding, threshold)
-    # code assumes multiple data processed at once, though I will only process one
-    final_labels = []
-    labels_fs = []
-    # extraction & prediction, while also computing the merged feature at once
-    feature, feats_new = compute_merged_features_from_csv_data(file_j_processed, fps)
-    clf = load_classifier(clf_path)
-    labels = bsoid_predict(feats_new, clf)
-    # padding of labels
-    # invert the content of labels
-    for m in range(0, len(labels)):
-        labels[m] = labels[m][::-1]
-    # create all -1 padding with second size being length of longest label list
-    labels_pad = -1 * np.ones([len(labels), len(max(labels, key=lambda x: len(x)))])
-    # populate a frame-shifted stack of predictions that total to the whole video
-    for n, l in enumerate(labels):
-        labels_pad[n][0:len(l)] = l
-        labels_pad[n] = labels_pad[n][::-1]
-        if n > 0:
-            labels_pad[n][0:n] = labels_pad[n - 1][0:n]
-    labels_fs.append(labels_pad.astype(int))
-    # Frameshift arrangement of predicted labels
-    for l_fs in labels_fs:
-        labels_fs2 = []
-        for l in range(math.floor(fps / 10)):
-            labels_fs2.append(l_fs[l])
-        final_labels.append(np.array(labels_fs2).flatten('F'))
-    label = final_labels[0]
+    if recompute:
+        # read data from csv and filter data
+        file_j_df = pd.read_csv(filepath, low_memory=False)
+        file_j_processed, _ = adp_filt(file_j_df, pose, brute_thresholding, threshold)
+        # code assumes multiple data processed at once, though I will only process one
+        final_labels = []
+        labels_fs = []
+        # extraction & prediction, while also computing the merged feature at once
+        feature, feats_new = compute_merged_features_from_csv_data(file_j_processed, fps)
+        clf = load_classifier(clf_path)
+        labels = bsoid_predict(feats_new, clf)
+        # padding of labels
+        # invert the content of labels
+        for m in range(0, len(labels)):
+            labels[m] = labels[m][::-1]
+        # create all -1 padding with second size being length of longest label list
+        labels_pad = -1 * np.ones([len(labels), len(max(labels, key=lambda x: len(x)))])
+        # populate a frame-shifted stack of predictions that total to the whole video    
+        for n, l in enumerate(labels):
+            labels_pad[n][0:len(l)] = l
+            labels_pad[n] = labels_pad[n][::-1]
+            if n > 0:
+                labels_pad[n][0:n] = labels_pad[n - 1][0:n]
+        labels_fs.append(labels_pad.astype(int))
+        # Frameshift arrangement of predicted labels
+        for l_fs in labels_fs:
+            labels_fs2 = []
+            for l in range(math.floor(fps / 10)):
+                labels_fs2.append(l_fs[l])
+            final_labels.append(np.array(labels_fs2).flatten('F'))
+        label = final_labels[0]
 
     if save_result:
-      print(f"Saving results to: {save_path}")
-      np.save(os.path.join(save_path, feature_save_filename), feature)
-      np.save(os.path.join(save_path,   label_save_filename),   label)
-      # also save it as csv
-      np.savetxt(os.path.join(save_path, feature_save_filename.replace('.npy', '.csv')), 
-                 feature, delimiter=",", comments='')
-      np.savetxt(os.path.join(save_path,   label_save_filename.replace('.npy', '.csv')), 
-                   label, delimiter=",", comments='')
+        print(f"Saving results to: {save_path}")
+        np.save(os.path.join(save_path, feature_save_filename), feature)
+        np.save(os.path.join(save_path,   label_save_filename),   label)
+        # also save it as csv
+        # np.savetxt(), 
+        #            feature, delimiter=",", comments='')
+        # np.savetxt(os.path.join(save_path,   label_save_filename.replace('.npy', '.csv')), 
+        #              label, delimiter=",", comments='')
+        # specify which bodypart we consider - predicted from pose
+        bodyparts = []
+        for pose_val in pose:
+            bp = Bodypart(pose_val // 3)
+            if bp not in bodyparts:
+                bodyparts.append(bp)
+        feature_to_index_map = generate_guessed_map_of_feature_to_data_index(
+            bodyparts, short=True
+        )
+        # then create column names from those info
+        column_header = ["label"] + ["_tofill_"] * len(feature_to_index_map)
+        for feature_name, feature_idx in feature_to_index_map.items():
+           column_header[feature_idx + 1] = feature_name
+        # finally populate a dataframe with the given data
+        label = label[:feature.shape[1]] # truncate labels by the number of features
+        # len(labels) > len(features) as artifact of padding - have to double check
+        df_data = np.concatenate((np.expand_dims(label, axis=0), feature), 
+                                 axis=0).T
+        saved_df = pd.DataFrame(data=df_data, columns=column_header)
+        saved_df.to_csv(os.path.join(
+           save_path, 
+           feature_save_filename.replace(FEATURE_FILE_SUFFIX, '_labeled_features.csv')
+           ))
 
-  return label, feature
+    return label, feature
 
 
 # helper to load a classifier from a sav file
