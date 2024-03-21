@@ -1,5 +1,6 @@
 # Anything pycache (cached python files) is ignored
-*/__pycache__
+__pycache__/
+
 
 #################
 # BSOID_related #
