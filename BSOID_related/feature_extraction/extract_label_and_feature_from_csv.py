@@ -55,7 +55,7 @@ def extract_label_and_feature_from_csv(filepath : str, pose : List[int],
     features. Defaults to FEATURE_SAVING_FOLDERS.
     """
 
-    filename = os.path.basename(filepath)
+    filename = os.path.basename(filepath).replace('.csv', '')
     clfname = os.path.basename(clf_path).replace('_randomforest.sav', '')
     feature_save_filename = clfname + "_" + filename + FEATURE_FILE_SUFFIX
     label_save_filename   = clfname + "_" + filename + LABEL_FILE_SUFFIX
