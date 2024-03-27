@@ -1,0 +1,56 @@
+# This file holds group categorizations of B-SOID labels for different 
+# versions of the network created.
+networks:
+  Feb-23-2023:
+    Rest:
+    - 6
+    - 20
+    - 21
+    - 32
+    RightBodyTurn:
+    - 37
+    - 41
+    RightHeadTurnNoMotion:
+    - 8
+    - 11
+    - 19
+    RightHeadTurnMotion:
+    - 23
+    - 39
+    - 40
+    LeftHeadTurnMotion:
+    - 36
+    WallRearing:
+    - 12
+    - 28
+    - 34
+    GroomingForePaw:
+    - 19
+    - 35
+    GroomingHindPaw:
+    - 16
+    Locomotion:
+    - 38
+    UnderOnePercent:
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    - 7
+    - 9
+    - 10
+    - 13
+    - 14
+    - 15
+    - 17
+    - 18
+    - 22
+    - 24
+    - 25
+    - 26
+    - 27
+    - 29
+    - 30
+    - 31
+    - 33
