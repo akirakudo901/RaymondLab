@@ -20,7 +20,7 @@ YAML_PATH = os.path.join(os.path.dirname(__file__), YAML_FILENAME)
 class BehaviorGrouping:
 
     def __init__(self, network_name : str, yaml_path : str=YAML_PATH):
-        self.label_to_groups = {}
+        self.label_to_groups_str = {}
         self.load_behavior_groupings(network_name, yaml_path)
         
     def load_behavior_groupings(self, network_name : str, yaml_path : str=YAML_PATH):
@@ -44,36 +44,67 @@ class BehaviorGrouping:
         self.yaml_path = yaml_path
 
         yaml_dict = yaml.safe_load(document)
-        self.groupings = yaml_dict['networks'][network_name]
+        self.groupings_str = yaml_dict['networks'][network_name]
+        # also define integer label of groupings & back-and-forth conversion
+        # *use the fact that keys, values and items are traversed in the same order
+        self.grouping_str_to_grouping_int = [
+            (grouping, i) for i, grouping in enumerate(self.groupings_str.keys())
+            ]
+        self.grouping_int_to_grouping_str = [
+            (i, grouping) for i, grouping in enumerate(self.groupings_str.keys())
+            ]
+        self.groupings_int = [
+            (i, lst) for i, lst in enumerate(self.groupings_str.values())
+            ]
+
         # given self.groupings maps behavior groups to labels, 
         # also get the opposite 
-        if self.label_to_groups: self.label_to_groups = {} # reset if exists
-        for group, labels in self.groupings.items():
+        if self.label_to_groups_str: self.label_to_groups_str = {} # reset if exists
+        if self.label_to_groups_int: self.label_to_groups_int = {} # reset if exists
+        for i, group, labels in enumerate(self.groupings_str.items()):
             for l in labels:
-                self.label_to_groups[l] = group
-        return self.groupings
+                self.label_to_groups_str[l] = group
+                self.label_to_groups_int[l] = i
+        return self.groupings_str
 
-    def label_to_behavioral_group(self, label : int):
+    def label_to_behavioral_group_str(self, label : int):
         """
         :returns str: Returns the corresponding behavioral group string, or 
         "Not found" if not in the dictionary.
         """
-        if label not in self.label_to_groups.keys():
+        if label not in self.label_to_groups_str.keys():
             print(f"Provided label {label} isn't in the behavioral groupings!")
             return "Not found"
         else:
-            return self.label_to_groups[label]
+            return self.label_to_groups_str[label]
+    
+    def label_to_behavioral_group_int(self, label : int):
+        """
+        :returns str: Returns the corresponding behavioral group string, or 
+        "Not found" if not in the dictionary.
+        """
+        if label not in self.label_to_groups_str.keys():
+            print(f"Provided label {label} isn't in the behavioral groupings!")
+            return "Not found"
+        else:
+            return self.label_to_groups_str[label]
 
-    def behavioral_group_to_label(self, behavioral_group : str):
+    def behavioral_group_to_label(self, behavioral_group : str | int):
         """
         :returns List[int]: Returns the corresponding labels, or 
         an empty list if not in the dictionary.
         """
-        if behavioral_group not in self.groupings.keys():
-            print(f"Provided behavioral_group {behavioral_group} isn't in the behavioral groupings!")
-            return []
-        else:
-            return self.groupings[behavioral_group]
+        if isinstance(behavioral_group, int):
+            if behavioral_group in self.groupings_int.keys():
+                return self.groupings_int[behavioral_group]
+        elif isinstance(behavioral_group, str):
+            if behavioral_group in self.groupings_str.keys():
+                return self.groupings_str[behavioral_group]
+        # otherwise, it wasn't found
+        print(f"Provided behavioral_group {behavioral_group} isn't in the behavioral groupings!")
+        return []
+        
+    
 
 
 if __name__ == "__main__":
