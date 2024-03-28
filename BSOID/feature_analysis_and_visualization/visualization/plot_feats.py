@@ -1,6 +1,6 @@
 # Author: Akira Kudo
 # Created: -
-# Last updated: 2024/03/27
+# Last updated: 2024/03/28
 """
 Visualization functions and saving plots.
 """
@@ -8,6 +8,7 @@ Visualization functions and saving plots.
 from datetime import datetime
 import os
 import pytz
+import re
 from typing import Dict, List
 
 import matplotlib.pyplot as plt
@@ -23,6 +24,7 @@ def plot_feats(feats: list, labels: list,
                feature_to_index_map : dict,
                figure_save_dir : str,
                csv_name : str,
+               show_figure : bool=True,
                save_figure : bool=True,
                use_logscale : bool=False,
                brute_thresholding : bool=False):
@@ -59,6 +61,7 @@ def plot_feats(feats: list, labels: list,
     result = isinstance(labels, list)
 
     newfilename = get_newname(show_specific_groups, labels)
+    newfilename = get_mousename(csv_name) + newfilename
     figure_subdir = os.path.join(figure_save_dir, newfilename)
     if save_figure and not os.path.exists(figure_subdir):
         os.mkdir(figure_subdir)
@@ -78,6 +81,7 @@ def plot_feats(feats: list, labels: list,
                               feature_to_index_map=feature_to_index_map,
                               figure_save_dir=figure_subdir,
                               csv_name=csv_name,
+                              show_figure=show_figure,
                               save_figure=save_figure,
                               use_logscale=use_logscale,
                               brute_thresholding=brute_thresholding)
@@ -89,9 +93,18 @@ def plot_feats(feats: list, labels: list,
                           feature_to_index_map=feature_to_index_map,
                           figure_save_dir=figure_subdir,
                           csv_name=csv_name,
+                          show_figure=show_figure,
                           save_figure=save_figure,
                           use_logscale=use_logscale,
                           brute_thresholding=brute_thresholding)
+
+def get_mousename(filename : str):
+    # Extracting information from the filename using regular expressions
+    searched = re.search(r'(\d+)(_?)[mf](\d+)', filename)
+    if searched:
+       return searched[0].replace('_', '')
+    else:
+       return "No_Match"
 
 def get_newname(show_specific_groups, labels):
   vancouver_time = datetime.now(pytz.timezone('America/Vancouver'))
@@ -129,6 +142,7 @@ def helper_plot_feats(feature : np.ndarray, label : np.ndarray,
                       feature_to_index_map : Dict[str, int],
                       figure_save_dir : str,
                       csv_name : str,
+                      show_figure : bool=True,
                       save_figure : bool=True,
                       use_logscale : bool=False, 
                       brute_thresholding : bool=False):
@@ -214,4 +228,4 @@ def helper_plot_feats(feature : np.ndarray, label : np.ndarray,
             f.write(f"Use bruteforce vs. adaptive threshold: {'bruteforce' if brute_thresholding else 'adaptive'}")
             f.write(f"Groups to be shown: {show_specific_groups}")
 
-    plt.show()
+    if show_figure: plt.show()

@@ -70,21 +70,24 @@ displacement_bodyparts = [
 # PATHS
 ###################
 # the path to the network folders generated
-NETWORK_SUBFOLDER = "Akira_Feb262024"
+NETWORK_NAME = 'Feb-23-2023' #'Feb-26-2024'
+NETWORK_SUBFOLDER = f"Leland_{NETWORK_NAME.replace('-', '')}"
+# f"Akira_{NETWORK_NAME.replace('-', '')}"
+
 # the predictions file holds a precomputed set of labels for the FILE_OF_INTEREST file
 PREDICTIONS_FILENAME = os.path.join("sav", NETWORK_SUBFOLDER,
-                                    "Feb-26-2024_predictions.sav")
+                                    f"{NETWORK_NAME}_predictions.sav")
 # the csv file of interest is the file we want to compute the feature histograms for
 # if B-SOID has already ran on it, you might want to use a 'predictions.sav'
 # file to extract labels from to speed up the process
-CSVFILE_OF_INTEREST = [
-    "20211018011357_242m12DLC_resnet50_Q175-D2Cre Open Field Males BrownJan12shuffle1_500000.csv",
-    "20220228203032_316367_m2_openfieldDLC_resnet50_Q175-D2Cre Open Field Males BrownJan12shuffle1_500000.csv",
-    "20220228223808_320151_m1_openfieldDLC_resnet50_Q175-D2Cre Open Field Males BrownJan12shuffle1_500000.csv",
-    "20220228231804_320151_m2_openfieldDLC_resnet50_Q175-D2Cre Open Field Males BrownJan12shuffle1_500000.csv",
-    "20220228235946_320151_m3_openfieldDLC_resnet50_Q175-D2Cre Open Field Males BrownJan12shuffle1_500000.csv",
-    "20230107131118_363453_m1_openfieldDLC_resnet50_Q175-D2Cre Open Field Males BrownJan12shuffle1_500000.csv"
-    ]
+CSVFILE_OF_INTEREST = []
+#     "20211018011357_242m12DLC_resnet50_Q175-D2Cre Open Field Males BrownJan12shuffle1_500000.csv",
+#     "20220228203032_316367_m2_openfieldDLC_resnet50_Q175-D2Cre Open Field Males BrownJan12shuffle1_500000.csv",
+#     "20220228223808_320151_m1_openfieldDLC_resnet50_Q175-D2Cre Open Field Males BrownJan12shuffle1_500000.csv",
+#     "20220228231804_320151_m2_openfieldDLC_resnet50_Q175-D2Cre Open Field Males BrownJan12shuffle1_500000.csv",
+#     "20220228235946_320151_m3_openfieldDLC_resnet50_Q175-D2Cre Open Field Males BrownJan12shuffle1_500000.csv",
+#     "20230107131118_363453_m1_openfieldDLC_resnet50_Q175-D2Cre Open Field Males BrownJan12shuffle1_500000.csv"
+#     ]
 # FROM AKIRA FEB26-2024 NETWORK
 
 # FROM LELAND FEB23-2023 NETWORK
@@ -96,7 +99,7 @@ PREDICTIONS_PATH = os.path.join(YOUR_ROOT, "data", PREDICTIONS_FILENAME)
 CSVFOLDER_PATH = os.path.join(YOUR_ROOT, "data", "csv", NETWORK_SUBFOLDER)
 # this holds the path to the classifier used to generate all these data; set it to the correct one,
 # even if only utilizing the 'extract_pregenerated_labels_and_compute_features' functionality
-CLF_FILENAME = r"Feb-26-2024_randomforest.sav"
+CLF_FILENAME = f"{NETWORK_NAME}_randomforest.sav"
 # r"Feb-23-2023_randomforest.sav"
 CLF_SAV_PATH = os.path.join(YOUR_ROOT, "data", "sav", NETWORK_SUBFOLDER, CLF_FILENAME)
 
@@ -109,9 +112,10 @@ COMPUTED_FEATURE_SAVING_PATH = os.path.join(YOUR_ROOT, "results", "feats_labels"
 ######################
 # OTHER CONFIGURATIONS
 ######################
-
+# whether to show the figure - if on a computer, might want to check afterwards
+SHOW_FIGURE = False
 # whether to save rendered histogram figures
-SAVE_FIGURE = False
+SAVE_FIGURE = True
 # whether to use a log scale for for the y-ticks of the histogram
 LOGSCALE = True
 # whether to use adaptive or brute thresholding for filtering values
@@ -149,8 +153,9 @@ def main(csvfile : str):
     )
     # show the unfiltered mouse trajectory to check for gitter
     plot_mouse_trajectory(csvpath=csvfullpath,
-                            figureName="Mouse trajectory " + os.path.basename(csvfullpath),
+                            figureName=os.path.basename(csvfullpath).replace('.csv', ''),
                             start=0, end=None, bodypart="tailbase",
+                            show_figure=SHOW_FIGURE,
                             save_figure=SAVE_FIGURE,
                             save_path=os.path.join(FIGURE_SAVING_PATH,
                                                 "mouseTrajectory"))
@@ -162,6 +167,7 @@ def main(csvfile : str):
                 feature_to_index_map=featname_to_idx_map,
                 figure_save_dir=FIGURE_SAVING_PATH,
                 csv_name=csvfile,
+                show_figure=SHOW_FIGURE, 
                 save_figure=SAVE_FIGURE,
                 use_logscale=LOGSCALE,
                 brute_thresholding=BRUTE_THRESHOLDING)
@@ -169,13 +175,13 @@ def main(csvfile : str):
     plot_bout_length(labels,
                     csv_name=csvfile,
                     figure_save_dir=FIGURE_SAVING_PATH,
+                    show_figure=SHOW_FIGURE,
                     save_figure=SAVE_FIGURE,
                     use_logscale=LOGSCALE)
 
 if __name__ == "__main__":
     from feature_analysis_and_visualization.behavior_groups import BehaviorGrouping
     
-    NETWORK_NAME = 'Feb-23-2023'
     LABEL_OF_INTEREST = "WallRearing"
     
     GROUPS_TO_SHOW = []
@@ -189,5 +195,7 @@ if __name__ == "__main__":
         raise Exception(f"We couldn't find the behavior group {LABEL_OF_INTEREST}, " +
                         "or no label seem to belong to it...")
 
+    # automatically execute compute on every csv in the specified folder 
+    CSVFILE_OF_INTEREST = os.listdir(CSVFOLDER_PATH)
     for csvfile in CSVFILE_OF_INTEREST:
         main(csvfile)

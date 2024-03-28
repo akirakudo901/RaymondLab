@@ -12,6 +12,7 @@ from ..utils import find_runs
 def plot_bout_length(labels : np.ndarray,
                      csv_name : str,
                      figure_save_dir : str,
+                     show_figure : bool=True,
                      save_figure : bool=True,
                      use_logscale : bool=True):
   FIGSIZE_X, FIGSIZE_Y = 6, max(6, len(np.unique(labels))//2)
@@ -55,4 +56,4 @@ def plot_bout_length(labels : np.ndarray,
                               str.join('', (full_figurename,
                                             "_Logscale" if use_logscale else "",
                                             ".png" ))))
-  plt.show()
+  if show_figure: plt.show()

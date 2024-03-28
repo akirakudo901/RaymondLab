@@ -1,6 +1,6 @@
 # Author: Akira Kudo
 # Created: -
-# Last updated: 2024/03/27
+# Last updated: 2024/03/28
 
 import os
 
@@ -14,6 +14,7 @@ from feature_extraction.extract_label_and_feature_from_csv import FEATURE_SAVING
 def plot_mouse_trajectory(csvpath : str, figureName : str,
                           start : int=0, end : int=None,
                           bodypart : str="tailbase",
+                          show_figure : bool=True,
                           save_figure : bool=True,
                           save_path : str=FEATURE_SAVING_FOLDERS):
   """
@@ -37,12 +38,13 @@ def plot_mouse_trajectory(csvpath : str, figureName : str,
   X,Y = filtered_data[:,bp_x_idx], filtered_data[:,bp_y_idx]
 
   if end is None: end = len(X)
-  plot_figure_over_time(X, Y, start, end, figureName, save_figure, save_path)
+  plot_figure_over_time(X, Y, start, end, figureName, show_figure, save_figure, save_path)
 
 # Plots joy stick position over time, with points progressively increasing in
 # shade darkness for later time points
 def plot_figure_over_time(X : np.ndarray, Y : np.ndarray,
                           start : int, end : int, figureName : str,
+                          show_figure : bool=True,
                           save_figure : bool=True,
                           save_path : str=FEATURE_SAVING_FOLDERS):
   # clip end
@@ -70,4 +72,4 @@ def plot_figure_over_time(X : np.ndarray, Y : np.ndarray,
     print(f"Saving {figureName} to {save_path}!")
     plt.savefig(os.path.join(save_path, figureName + '_figure.png'))
 
-  plt.show()
+  if show_figure: plt.show()
