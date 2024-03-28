@@ -12,7 +12,7 @@ Visually and statistically compare different features,
 
 import yaml
 
-YAML_PATH = r"Z:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\RaymondLab\BSOID_related\feature_visualization\behavior_groups.yml"
+YAML_PATH = r"Z:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\RaymondLab\BSOID_related\feature_analysis_and_visualization\behavior_groups.yml"
 
 class BehaviorGrouping:
 

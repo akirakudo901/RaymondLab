@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 import matplotlib.transforms as transforms
 import numpy as np
 
-from .utils import find_runs
+from ..utils import find_runs
 
 def quantify_label_occurrence_and_length_distribution(labels : np.ndarray):
     """
