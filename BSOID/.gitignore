@@ -2,9 +2,9 @@
 # BSOID_related #
 #################
 
-# Anything under feature_visualization_JupyterNotebook is 
+# Anything under COMPUTED is 
 # actually executed results and data
-/feature_visualization_JupyterNotebook
+/COMPUTED
 
 # Anything under feature_extraction/results is not saved on git
 /feature_extraction/results

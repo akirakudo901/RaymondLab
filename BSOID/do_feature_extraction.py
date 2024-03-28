@@ -10,7 +10,7 @@ POSE = list(range(3*6)) # <- 3 (x,y,lhl) columns x 6 body parts
 # 6 bodyparts: snout, rightfrontpaw, leftfrontpaw, righthindpaw, lefthindpaw, tailbase; [belly]
 
 CLFPATH = r".\feature_visualization_JupyterNotebook\data" + \
-          r"\sav\Leland_Feb232023_network\Feb-23-2023_randomforest.sav"
+          r"\sav\Leland_Feb232023\Feb-23-2023_randomforest.sav"
 
 SAVEPATH = "./feature_extraction/results"
 
