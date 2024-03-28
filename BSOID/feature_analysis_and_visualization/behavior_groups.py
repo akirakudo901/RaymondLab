@@ -10,9 +10,12 @@ Visually and statistically compare different features,
 2) within the group themselves.
 """
 
+import os
+
 import yaml
 
-YAML_PATH = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\RaymondLab\BSOID\feature_analysis_and_visualization\behavior_groups.yml"
+YAML_FILENAME = "behavior_groups.yml"
+YAML_PATH = os.path.join(os.path.dirname(__file__), YAML_FILENAME)
 
 class BehaviorGrouping:
 

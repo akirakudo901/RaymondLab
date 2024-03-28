@@ -25,7 +25,7 @@ YOUR_ROOT
 """
 
 ########################
-YOUR_ROOT = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\RaymondLab\BSOID\COMPUTED"
+YOUR_ROOT = r"Z:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\RaymondLab\BSOID\COMPUTED"
 ########################
 
 # ACTUAL CREATION

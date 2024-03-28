@@ -61,7 +61,7 @@ def plot_feats(feats: list, labels: list,
     result = isinstance(labels, list)
 
     newfilename = get_newname(show_specific_groups, labels)
-    newfilename = get_mousename(csv_name) + newfilename
+    newfilename = f"{newfilename}_{get_mousename(csv_name)}"
     figure_subdir = os.path.join(figure_save_dir, newfilename)
     if save_figure and not os.path.exists(figure_subdir):
         os.mkdir(figure_subdir)
@@ -128,7 +128,16 @@ def get_newname(show_specific_groups, labels):
     if in_a_group:
       shown_groups.append((start, end))
     # we consider two namings: show all ranges, or show what is excluded from ranges
-    show_in_ranges = '_'.join([str(start)+"to"+str(end) for start, end in shown_groups])
+    
+    def get_shorter_range(start, end):
+       from_to_format = str(start)+"to"+str(end)
+       underscore_separated_format = "_".join([str(i) for i in range(start, end+1)])
+       if len(from_to_format) <= len(underscore_separated_format):
+          return from_to_format
+       else:
+          return underscore_separated_format
+
+    show_in_ranges = '_'.join([get_shorter_range(start, end) for start, end in shown_groups])
     show_by_exclusion = str(min_ssg) + "to" + str(max_ssg) + "_not_" + \
                         '_'.join([str(i) for i in range(min_ssg, max_ssg+1) if i not in ssg_copy])
     # choose the shorter name
