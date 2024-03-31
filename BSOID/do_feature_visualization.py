@@ -187,7 +187,7 @@ if __name__ == "__main__":
     GROUPS_TO_SHOW = []
 
     bg = BehaviorGrouping(network_name=NETWORK_NAME)
-    for behavior_group, labels in bg.groupings.items():
+    for behavior_group, labels in bg.groupings_str.items():
         if behavior_group == LABEL_OF_INTEREST:
             GROUPS_TO_SHOW = labels
     

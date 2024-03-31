@@ -20,7 +20,7 @@ YAML_PATH = os.path.join(os.path.dirname(__file__), YAML_FILENAME)
 class BehaviorGrouping:
 
     def __init__(self, network_name : str, yaml_path : str=YAML_PATH):
-        self.label_to_groups_str = {}
+        self.label_to_groups_str, self.label_to_groups_int = {}, {}
         self.load_behavior_groupings(network_name, yaml_path)
         
     def load_behavior_groupings(self, network_name : str, yaml_path : str=YAML_PATH):
@@ -47,21 +47,22 @@ class BehaviorGrouping:
         self.groupings_str = yaml_dict['networks'][network_name]
         # also define integer label of groupings & back-and-forth conversion
         # *use the fact that keys, values and items are traversed in the same order
-        self.grouping_str_to_grouping_int = [
+        self.grouping_str_to_grouping_int = dict([
             (grouping, i) for i, grouping in enumerate(self.groupings_str.keys())
-            ]
-        self.grouping_int_to_grouping_str = [
+            ])
+        self.grouping_int_to_grouping_str = dict([
             (i, grouping) for i, grouping in enumerate(self.groupings_str.keys())
-            ]
-        self.groupings_int = [
+            ])
+        self.groupings_int = dict([
             (i, lst) for i, lst in enumerate(self.groupings_str.values())
-            ]
+            ])
 
         # given self.groupings maps behavior groups to labels, 
         # also get the opposite 
         if self.label_to_groups_str: self.label_to_groups_str = {} # reset if exists
         if self.label_to_groups_int: self.label_to_groups_int = {} # reset if exists
-        for i, group, labels in enumerate(self.groupings_str.items()):
+        for i, group_with_label in enumerate(self.groupings_str.items()):
+            group, labels = group_with_label
             for l in labels:
                 self.label_to_groups_str[l] = group
                 self.label_to_groups_int[l] = i
@@ -80,14 +81,14 @@ class BehaviorGrouping:
     
     def label_to_behavioral_group_int(self, label : int):
         """
-        :returns str: Returns the corresponding behavioral group string, or 
-        "Not found" if not in the dictionary.
+        :returns str: Returns the corresponding behavioral group integer, or 
+        -1 if not in the dictionary.
         """
-        if label not in self.label_to_groups_str.keys():
+        if label not in self.label_to_groups_int.keys():
             print(f"Provided label {label} isn't in the behavioral groupings!")
-            return "Not found"
+            return -1
         else:
-            return self.label_to_groups_str[label]
+            return self.label_to_groups_int[label]
 
     def behavioral_group_to_label(self, behavioral_group : str | int):
         """
@@ -103,6 +104,13 @@ class BehaviorGrouping:
         # otherwise, it wasn't found
         print(f"Provided behavioral_group {behavioral_group} isn't in the behavioral groupings!")
         return []
+    
+    def get_behavior_groups(self):
+        """
+        :returns List[str]: Returns the list of string corresponding
+        to all behavior groups in this.
+        """
+        return list(self.groupings_str.keys())
         
     
 
