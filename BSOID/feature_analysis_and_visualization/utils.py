@@ -33,3 +33,16 @@ def find_runs(x):
         run_lengths = np.diff(np.append(run_starts, n))
 
         return run_values, run_starts, run_lengths
+    
+def process_upper_and_lower_limit(limits : tuple):
+    """
+    Returns a sorted tuple of higher & lower values. 
+    If limits contain a None entry, it is replaced by 
+    float("-inf") for limits[0] and float("inf") for limits[1].
+    Tuple passed with size != 2 raises an error.    
+    """
+    limits = list(limits)
+    if len(limits) != 2: raise Exception("limits must be of size 2...")
+    if limits[0] is None: limits[0] = float("-inf")
+    if limits[1] is None: limits[1] = float("inf")
+    return min(limits), max(limits)
