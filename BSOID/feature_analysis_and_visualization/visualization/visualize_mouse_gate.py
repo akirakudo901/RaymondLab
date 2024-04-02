@@ -47,6 +47,7 @@ def visualize_mouse_gate(df : pd.DataFrame,
     locomotion_lengths = run_lengths[locomotion_within_array]
     
     _, axes = plt.subplots(len(bodyparts), 1)
+    align_with = {}
 
     for bpt_idx, bpt in enumerate(bodyparts):
         x, y = df[bpt, 'x'].to_numpy(), df[bpt, 'y'].to_numpy()
@@ -59,16 +60,19 @@ def visualize_mouse_gate(df : pd.DataFrame,
             if i >= plot_N_runs: break
             run_end = run_start + locomotion_lengths[i] - 1
             run = movement[run_start:run_end]
+            run_duration = f"{run_start}~{run_end}"
             # obtain where the paw movement starts and ends based on threshold
-            move_start, move_end, move_middle = find_paw_movements(run)
-            align_with = move_middle[0]
+            # we align every bodypart to the first bpt's paw movement
+            if bpt_idx == 0:
+                move_start, move_end, move_middle = find_paw_movements(run)
+                align_with[run_duration] = move_middle[0]
             # we plot every run while shifting them so that 0 is the first paw movement
-            ax.plot(range(-align_with, len(run) - align_with), 
-                    run, label=f"{run_start}~{run_end}")
+            ax.plot(range(-align_with[run_duration], len(run) - align_with[run_duration]), 
+                    run, label=run_duration)
 
         ax.set_title(f"{bpt}")
         if bpt_idx == len(bodyparts) - 1:
-            ax.set_xlabel('Time from start')
+            ax.set_xlabel('Time from first paw movement')
         ax.set_ylabel(f'Distance')
         ax.legend()
     plt.suptitle("Locomotion Sequences Distance")
