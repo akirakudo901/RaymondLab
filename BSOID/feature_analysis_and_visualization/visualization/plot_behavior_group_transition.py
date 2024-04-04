@@ -1,17 +1,21 @@
 # Author: Akira Kudo
 # Created: 2024/03/28
-# Last updated: 2024/03/31
+# Last updated: 2024/04/04
 
-import numpy as np
+import os
 
 import matplotlib.pyplot as plt
+import numpy as np
 
 from feature_analysis_and_visualization.behavior_groups import BehaviorGrouping
 
 def plot_behavior_group_transition(label : np.ndarray, 
                                    network_name : str, 
                                    start : int, 
-                                   end : int):
+                                   end : int, 
+                                   savedir : str,
+                                   savename : str,
+                                   savefigure : bool=True):
     # translate label into corresponding behavioral groups
     bg = BehaviorGrouping(network_name=network_name)
     lbl_2_bhvrl_int = np.vectorize(bg.label_to_behavioral_group_int)
@@ -34,4 +38,8 @@ def plot_behavior_group_transition(label : np.ndarray,
             ax.bar(shown_x, [1]*len(shown_x), width=1, color=color[idx], 
                 label=bg.grouping_int_to_grouping_str[bg_int])
     ax.legend()
+
+    if savefigure:
+        plt.savefig(os.path.join(savedir, savename))
+    
     plt.show()
