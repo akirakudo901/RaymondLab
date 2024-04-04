@@ -1,5 +1,6 @@
 
 import numpy as np
+import re
 
 # BELOW CODE WAS TAKEN FROM alimanfoo at:
 # https://gist.github.com/alimanfoo/c5977e87111abe8127453b21204c1065
@@ -33,3 +34,11 @@ def find_runs(x):
         run_lengths = np.diff(np.append(run_starts, n))
 
         return run_values, run_starts, run_lengths
+    
+def get_mousename(filename : str):
+    # Extracting information from the filename using regular expressions
+    searched = re.search(r'(\d+)(_?)[mf](\d+)', filename)
+    if searched:
+       return searched[0].replace('_', '')
+    else:
+       return "No_Match"
