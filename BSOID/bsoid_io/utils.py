@@ -2,6 +2,7 @@
 # Created: 2024/04/02
 # Last Updated: 2024/04/03
 
+import numpy as np
 import pandas as pd
 
 def read_BSOID_labeled_csv(csv_path : str,
@@ -17,7 +18,7 @@ def read_BSOID_labeled_csv(csv_path : str,
     """
     header_rows = [0,1,2] if include_scorer else [1,2]
     df = pd.read_csv(csv_path, header=header_rows, index_col=2)
-    label = df.iloc[:, 1].to_numpy()
+    label = df.iloc[:, 1].to_numpy().astype(np.int64)
     dlc_data = df.iloc[:, 2:]
     return label, dlc_data
 
