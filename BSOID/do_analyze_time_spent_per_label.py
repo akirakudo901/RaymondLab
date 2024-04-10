@@ -1,6 +1,6 @@
 # Author: Akira Kudo
 # Created: 2024/04/03
-# Last Updated: 2024/04/03
+# Last Updated: 2024/04/04
 
 import os
 
@@ -103,10 +103,24 @@ def compute_time_spent_per_label_for_list_of_csv_and_save(
     df = pd.DataFrame.from_dict(data)
     df.loc[-1] = mouse_types
     df.set_index(pd.Index(all_unique_labels.tolist() + ['mouseType']), inplace=True)
-    print(f"Saving of {savename}...", end="")
+    print(f"Saving of {savename}... ", end="")
     df.to_csv(os.path.join(savedir, savename))
-    print(f"Successful!")
+    print(f"SUCCESSFUL!")
 
+def compute_run_lengths_per_label_for_list_of_csv_and_save(
+        groups : list, group_names : list, savedir : str, savename : str
+        ):
+    """
+    Computes the length of runs of given labels in the given groups, 
+    saving them into a csv.
+
+    :param list groups: _description_
+    :param list group_names: _description_
+    :param str savedir: _description_
+    :param str savename: _description_
+    """
+
+# EXECUTION
 
 groups = [yac_csvs, wt_csvs]
 group_names = ["YAC128", "WT"]
