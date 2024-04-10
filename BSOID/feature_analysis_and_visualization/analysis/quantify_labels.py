@@ -44,7 +44,7 @@ def quantify_label_occurrence_and_length_distribution(
         grouped_labels = [np.concatenate(gol) for gol in to_be_grouped_labels]
         
         # then create the plots
-        _, axes = plt.subplots(len(group_of_labels), 1, figsize=(20,6))
+        _, axes = plt.subplots(len(group_of_labels), 1, figsize=(20,3*len(group_of_labels)))
         for i, (grouped_lbl, name) in enumerate(zip(grouped_labels, group_names)):
             ax = axes[i]
             # get the number of occurrence per label
@@ -84,8 +84,9 @@ def quantify_label_occurrence_and_length_distribution(
                     additional_line_props.append( (percentage*one_percent_height, f"{percentage}%") )
             draw_line_and_mark_y_val_at(axis=ax, height_label_pair=additional_line_props)
             ax.yaxis.tick_right()
-            ax.set_title(f'{plot_title} {name}')
+            ax.set_ylabel(name, labelpad=30)
             if use_logscale: ax.yscale('log')
+        plt.suptitle(plot_title)
         plt.show()
     
     # first visualize the number of occurrence per label into an overlaid plot
