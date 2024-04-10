@@ -46,7 +46,7 @@ def quantify_label_occurrence_and_length_distribution(
         # then create the plots
         _, axes = plt.subplots(len(group_of_labels), 1, figsize=(20,3*len(group_of_labels)))
         for i, (grouped_lbl, name) in enumerate(zip(grouped_labels, group_names)):
-            ax = axes[i]
+            ax = axes if (len(group_of_labels) == 1) else axes[i]
             # get the number of occurrence per label
             unique_label_counts = [np.sum(grouped_lbl == unique_l) for unique_l in unique_labels]
             # then sort them out according to their frequency
