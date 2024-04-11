@@ -9,6 +9,7 @@ import traceback
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 from skimage.draw import disk
 
 from dlc_io.utils import read_dlc_csv_file
@@ -18,10 +19,11 @@ COLORMAP = "rainbow"
 DOTSIZE = 7
 NUM_TRAILPOINTS = 0
 
-def make_video_from_dlc_and_images(dlc_path : str, img_dir : str,
-                                   frame_start : int, frame_end : int,
-                                   fps : int,
-                                   output_dir : str, output_name : str):
+def make_video_from_dlc_csv_and_images(
+        dlc_path : str, img_dir : str,
+        frame_start : int, frame_end : int,
+        fps : int,
+        output_dir : str, output_name : str):
     """
     Creates a video from the given dlc & pngs found under given 
     directories, as well as the specified starting & ending frames.
@@ -38,6 +40,33 @@ def make_video_from_dlc_and_images(dlc_path : str, img_dir : str,
     :param str output_name: The name of the outputted file.
     """
     df = read_dlc_csv_file(dlc_path=dlc_path, include_scorer=False)
+    make_video_from_dlc_dataframe_and_images(
+        df=df, img_dir=img_dir, frame_start=frame_start, 
+        frame_end=frame_end, fps=fps, output_dir=output_dir, 
+        output_name=output_name
+        )
+
+def make_video_from_dlc_dataframe_and_images(
+        df : pd.DataFrame, img_dir : str,
+        frame_start : int, frame_end : int,
+        fps : int,
+        output_dir : str, output_name : str
+        ):
+    """
+    Creates a video from the given dataframe as extracted from a dlc csv, 
+    pngs found under given directories, as well as the specified 
+    starting & ending frames. Video is created in specified frame-per-second.
+
+    :param pd.DataFrame df: pandas DataFrame holding bodypart data.
+    :param str img_dir: Path to directory holding images, each named 
+    so that they contain at their end one number specifying which frame 
+    in the video it is. E.g. 'image230_12.png' is numbered 12.
+    :param int frame_start: The start of extracted frame sequences, inclusive.
+    :param int frame_end: The end of extracted frame sequences, inclusive.
+    :param int fps: The frame-per-second for the produced video.
+    :param str output_dir: The path to the output directory.
+    :param str output_name: The name of the outputted file.
+    """
     df_x, df_y, _ = df.values.reshape((len(df), -1, 3)).T
     
     # first check that corresponding images already exist in img_dir
