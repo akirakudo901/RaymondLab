@@ -31,12 +31,14 @@ def filter_based_on_boolean_array(
     :param List[str] bodyparts: A list of body parts name we filter for.
     :param int start: The start frame number for filtering. Result might 
     not be deterministic as we treat the first frame as correct body part.
-    :param int end: The end frame number for filtering.
+    :param int end: The end frame number for filtering. If None, all the dataframe.
     :param str filter_mode: How to replace filtered data. 
     * "latest": picking the latest non-noise position
     * "linear": linear interpolation of non-noise frames pinching noises
     Defaults to "latest".
     """
+    if end is None: end = df.shape[0] - 1
+
     # filter mode should be an existent one
     FILTER_MODES = ["latest", "linear"]
     if filter_mode not in FILTER_MODES:
@@ -55,28 +57,30 @@ def filter_based_on_boolean_array(
     considered_bodyparts = [bpt for bpt in bodyparts_in_df if bpt in bodyparts]
     # if we're specifying no body part in the dataframe, simply return a deep copy
     if len(considered_bodyparts) == 0: 
+        print("Seems like we aren't considering any body part.")
         return df.copy(deep=True)
     # if 'bodyparts' isn't the highest level, pad for higher ones
     bpt_slice = tuple(
-        [slice(None)] * (len(df.columns.names) - 1) + [considered_bodyparts]
+        [slice(None)] * (df.columns.names.index('bodyparts') - 1) + [considered_bodyparts]
         )
-
+    
     returned_df = df.copy(deep=True)
     # filter_mode = latest case
     if filter_mode == "latest":
-        for curr_frame_idx in range(max(1, start), end + 1):
-            is_noise = bool_arr[curr_frame_idx]
+        for curr_frame_idx in range(max(1, start+1), end + 1):
+            is_noise = bool_arr[curr_frame_idx - start]
             # if we are at a noise frame, copy the previous frame entry
             if is_noise:
                 change_to = returned_df.loc[curr_frame_idx-1, bpt_slice].to_numpy()
                 returned_df.loc[curr_frame_idx, bpt_slice] = change_to
-    
+                
     # filter_mode = linear case
     elif filter_mode == "linear":
         # keep track of the last non-noise row
         last_nonnoise_row_idx = 0
-        for curr_frame_idx in range(max(1, start), end + 1):
-            is_noise, prev_was_noise = bool_arr[curr_frame_idx], bool_arr[curr_frame_idx-1]
+        for curr_frame_idx in range(max(1, start+1), end + 1):
+            is_noise = bool_arr[curr_frame_idx - start]
+            prev_was_noise = bool_arr[curr_frame_idx - start - 1]
             # if at a non-noise frame & previous frame was noise, we linear interpolate
             if not is_noise and prev_was_noise:
                 # find the stride per timepoint for the noise window
@@ -94,7 +98,6 @@ def filter_based_on_boolean_array(
             if not is_noise:
                 last_nonnoise_row_idx = curr_frame_idx
 
-    
     return returned_df
 
 if __name__ == "__main__":
