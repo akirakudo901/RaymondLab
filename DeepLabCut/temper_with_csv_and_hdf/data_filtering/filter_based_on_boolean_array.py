@@ -8,9 +8,11 @@ import numpy as np
 import pandas as pd
 
 def filter_based_on_boolean_array(
-    bool_arr : np.ndarray, 
+    bool_arr : np.ndarray,
     df : pd.DataFrame,
     bodyparts : List[str],
+    start : int=0,
+    end : int=None,
     filter_mode : str="latest",
     ):
     """
@@ -20,12 +22,16 @@ def filter_based_on_boolean_array(
     Filter can be either to replace with the latest non-noise 
     position, or by linear interpolation between the position 
     of non-noise frames pinching the noise frames. 
+    The process is executed only for frames between start and end.
 
     :param np.ndarray bool_arr: Array indicating which frame are noise.
     Shape of [num_timepoints].
     :param pd.DataFrame df: Dataframe containing DLC body part data.
     Shape of [num_timepoints x {num_bodypoints x (x,y,likelihood)}].
     :param List[str] bodyparts: A list of body parts name we filter for.
+    :param int start: The start frame number for filtering. Result might 
+    not be deterministic as we treat the first frame as correct body part.
+    :param int end: The end frame number for filtering.
     :param str filter_mode: How to replace filtered data. 
     * "latest": picking the latest non-noise position
     * "linear": linear interpolation of non-noise frames pinching noises
@@ -36,10 +42,13 @@ def filter_based_on_boolean_array(
     if filter_mode not in FILTER_MODES:
         raise Exception(f"filter_mode must be one of {','.join(FILTER_MODES)} ...")
     
-    # bool_arr and first dimension of df must be equal
-    if bool_arr.shape[0] != df.shape[0]:
-        raise Exception("bool_arr and df must have the save first dimension, but " + 
-                        f"had {bool_arr.shape[0]} and {df.shape[0]} respectively...")
+    # dataframe must be at least longer than end
+    if df.shape[0] <= end:
+        raise Exception(f"df must have at least {end} frames, but only had {df.shape[0]}...")
+
+    # length of bool_arr and number of frame between start and end must be equal
+    if bool_arr.shape[0] != (end - start + 1):
+        raise Exception(f"bool_arr has to be {end-start+1} long, but had {bool_arr.shape[0]} frames instead...")
     
     # we identify which body part to filter for
     bodyparts_in_df = np.unique(df.columns.get_level_values('bodyparts')).tolist()
@@ -55,7 +64,7 @@ def filter_based_on_boolean_array(
     returned_df = df.copy(deep=True)
     # filter_mode = latest case
     if filter_mode == "latest":
-        for curr_frame_idx in range(1, len(bool_arr)):
+        for curr_frame_idx in range(max(1, start), end + 1):
             is_noise = bool_arr[curr_frame_idx]
             # if we are at a noise frame, copy the previous frame entry
             if is_noise:
@@ -66,7 +75,7 @@ def filter_based_on_boolean_array(
     elif filter_mode == "linear":
         # keep track of the last non-noise row
         last_nonnoise_row_idx = 0
-        for curr_frame_idx in range(1, len(bool_arr)):
+        for curr_frame_idx in range(max(1, start), end + 1):
             is_noise, prev_was_noise = bool_arr[curr_frame_idx], bool_arr[curr_frame_idx-1]
             # if at a non-noise frame & previous frame was noise, we linear interpolate
             if not is_noise and prev_was_noise:
@@ -100,12 +109,15 @@ if __name__ == "__main__":
                        [2,45,238],
                        [7,70,700]],
                        columns=multiidx)
-    bool_arr = np.array([False,False,True,True,True,False,True,False])
+    bool_arr = np.array([False,False,True,True,True,False])#,True,False])
+    start, end = 0, 5
     latest_filtered = filter_based_on_boolean_array(
-        bool_arr=bool_arr, df=df, bodyparts=['whisker'], filter_mode="latest"
+        bool_arr=bool_arr, df=df, bodyparts=['whisker'], filter_mode="latest",
+        start=start, end=end
         )
     linear_filtered = filter_based_on_boolean_array(
-        bool_arr=bool_arr, df=df, bodyparts=['whisker'], filter_mode="linear"
+        bool_arr=bool_arr, df=df, bodyparts=['whisker'], filter_mode="linear",
+        start=start, end=end
         )
     print(f"latest_filtered: \n{latest_filtered}")
     print(f"linear_filtered: \n{linear_filtered}")
