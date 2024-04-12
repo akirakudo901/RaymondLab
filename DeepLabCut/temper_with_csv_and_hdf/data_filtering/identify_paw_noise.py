@@ -3,9 +3,11 @@
 # Last modified: 2024/03/20
 
 import os
+from typing import List
 
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 
 from dlc_io.utils import read_dlc_csv_file
 
@@ -110,6 +112,66 @@ def identify_bodypart_noise_in_rest(dlc_csv_path : str, bodypart : str,
     plt.title(f"All frames where the {bodypart} is wrong in position")
     plt.show()
     return noise, wrong_frames
+
+def identify_bodypart_noise_by_impossible_speed(
+        dlc_csv_path : str, bodyparts : List[str], 
+        start : int, end : int, 
+        threshold : float=IMPOSSIBLE_MOVE_TOLERANCE
+        ):
+    """
+    Identifies noise of a given body part based on an impossible
+    speed, specified as exceeding IMPOSSIBLE_MOVE_TOLERANCE.
+
+    :param str dlc_csv_path: Path to csv holding dlc data.
+    :param List[str] bodypart: A list of body parts we examine for impossible move.
+    :param int start: Beginning in frame of the filtering process - not deterministic
+    depending on the frame, as we assume that the position of body parts in the 
+    start frame is in a "correct" position. Play around with this to get desired result.
+    :param int end: End of frames for the filtering process.
+    :param float threshold: Threshold which if exceeded indicates impossible movement.
+    Defaults to CHANGE_TOLERANCE.
+
+    :returns pd.DataFrame returned_df: A dataframe holding information about identified
+    impossible frames & wrong frames based on those impossible frames.
+    With Multiindex of form [all bodyparts] x [impossible_frames, wrong_frames].
+    """
+    df = read_dlc_csv_file(dlc_csv_path, include_scorer=False)
+    
+    data = []
+    
+    # check how bodypoints move over time
+    unique_bpts = np.unique(df.columns.get_level_values('bodyparts'))
+    considered_bpts = unique_bpts[np.isin(unique_bpts, np.array(bodyparts))]
+    
+    for bpt in considered_bpts:
+        X = df.loc[start:end, (bpt, 'x')].to_numpy()
+        Y = df.loc[start:end, (bpt, 'y')].to_numpy()
+        xy_diff = np.sqrt(np.square(np.diff(X)) + np.square(np.diff(Y)))
+        where_bpt_moved_impossibly = xy_diff >= threshold
+        # pad first frame as not impossible
+        where_bpt_moved_impossibly = np.insert(where_bpt_moved_impossibly, 0, False)
+        data.append(where_bpt_moved_impossibly)
+        
+        # visualize where is a noise and where isn't
+        print(f"There are {np.sum(where_bpt_moved_impossibly)} frames with {bpt} noise!")
+        plt.step(range(len(where_bpt_moved_impossibly)), where_bpt_moved_impossibly)
+        plt.title(f"All frames where there is impossible {bpt} movement")
+        plt.show()
+
+        # find frames that are wrong based on the found impossible pattern
+        wrong_frames = find_wrong_bodypart_frame(where_bpt_moved_impossibly)
+        data.append(wrong_frames)
+        print("------------")
+        print(f"There are {np.sum(wrong_frames)} frames where the {bpt} is not in its correct position!")
+        plt.step(range(len(wrong_frames)), wrong_frames)
+        plt.title(f"All frames where the {bpt} is wrong in position")
+        plt.show()
+    
+    data = np.array(data).T
+    multiidx = pd.MultiIndex.from_product((considered_bpts, ['imp','wrng']), 
+                                          names=['bodyparts', 'content'])
+    returned_df = pd.DataFrame(data, columns=multiidx)
+    return returned_df
 
 def find_wrong_bodypart_frame(array_of_noises : np.ndarray):
     """
