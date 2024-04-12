@@ -1,6 +1,6 @@
 # Author: Akira Kudo
 # Created: 2024/03/21
-# Last Updated: 2024/04/10
+# Last Updated: 2024/04/12
 
 import os
 from typing import List
@@ -59,7 +59,8 @@ def quantify_label_occurrence_and_length_distribution(
                 sorted_unique_label_counts, 
                 width=1, 
                 color=sorted_color_per_label)
-            ax.set_xticks(range(len(sorted_unique_labels)), labels=sorted_unique_labels)
+            ax.set_xticks(range(len(sorted_unique_labels)))
+            ax.set_xticklabels(labels=sorted_unique_labels)
             # draw lines indicating at a set interval the height of different bars
             
             def draw_line_and_mark_y_val_at(axis, height_label_pair : list):
