@@ -1,12 +1,11 @@
 # Author: Akira Kudo
 # Created: 2024/04/01
-# Last updated: 2024/04/01
+# Last updated: 2024/04/02
 
 import os
 
-import pandas as pd
-
 from feature_analysis_and_visualization.visualization.visualize_mouse_gate import visualize_mouse_gate
+from bsoid_io.utils import read_BSOID_labeled_csv
 
 FILE_OF_INTEREST = r"312152_m2DLC_resnet50_WhiteMice_OpenfieldJan19shuffle1_1030000.csv"
 LABELED_PREFIX = r"Mar-10-2023labels_pose_40Hz"
@@ -20,10 +19,11 @@ LABELED_CSV_PATH = os.path.join(MOUSETYPE_FOLDER,
 
 
 # read csv
-df = pd.read_csv(LABELED_CSV_PATH, header=[1,2], index_col=[0])
-label = df.iloc[:, 0].to_numpy()
+label, df = read_BSOID_labeled_csv(LABELED_CSV_PATH)
 visualize_mouse_gate(df=df, 
                      label=label, 
-                     bodyparts=['righthindpaw', 'lefthindpaw'],
-                     length_limits=(30, 60),
+                     bodyparts=['righthindpaw', 'lefthindpaw', 
+                                'rightforepaw', 'leftforepaw', 
+                                'snout', 'tailbase'],
+                     length_limits=(60, 90), 
                      plot_N_runs=5)
