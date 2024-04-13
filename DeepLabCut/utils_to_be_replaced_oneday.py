@@ -1,6 +1,6 @@
 # Author: Akira Kudo
 # Created: 2024/04/10
-# Last Updated: 2024/04/10
+# Last Updated: 2024/04/12
 
 import re
 
@@ -15,3 +15,9 @@ def get_mousename(filename : str):
        return searched[0].replace('_', '')
     else:
        return "No_Match"
+    
+bodypart_abbreviation_dict = {
+    'snout' : 'snt', 'rightforepaw' : 'rfp', 'leftforepaw' : 'lfp',
+    'righthindpaw' : 'rhp', 'lefthindpaw' : 'lhp', 'tailbase' : 'tlbs',
+    'belly' : 'bll'
+    }
