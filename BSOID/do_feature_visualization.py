@@ -1,6 +1,6 @@
 # Author: Akira Kudo
 # Created: 2024/03/27
-# Last updated: 2024/03/27
+# Last updated: 2024/04/12
 
 import os
 from pathlib import Path
@@ -52,14 +52,17 @@ POSE = []; [POSE.extend([bp.value*3, bp.value*3+1, bp.value*3+2]) for bp in body
 
 # Put in the body pairs we care
 relative_placement_pairs = [
-    (Bodypart.SNOUT, Bodypart.RIGHTFOREPAW),
-    (Bodypart.SNOUT, Bodypart.RIGHTHINDPAW),
     (Bodypart.RIGHTFOREPAW, Bodypart.LEFTFOREPAW),
+    (Bodypart.RIGHTHINDPAW, Bodypart.LEFTHINDPAW),
     (Bodypart.SNOUT, Bodypart.TAILBASE)
 ]
 
 relative_angle_pairs = [
-    (Bodypart.SNOUT, Bodypart.TAILBASE)
+    (Bodypart.SNOUT, Bodypart.TAILBASE),
+    (Bodypart.RIGHTFOREPAW, Bodypart.TAILBASE),
+    (Bodypart.RIGHTHINDPAW, Bodypart.TAILBASE),
+    (Bodypart.LEFTFOREPAW, Bodypart.TAILBASE),
+    (Bodypart.LEFTHINDPAW, Bodypart.TAILBASE)
 ]
 
 displacement_bodyparts = [
@@ -70,8 +73,9 @@ displacement_bodyparts = [
 # PATHS
 ###################
 # the path to the network folders generated
-NETWORK_NAME = 'Feb-23-2023' #'Feb-26-2024'
-NETWORK_SUBFOLDER = f"Leland_{NETWORK_NAME.replace('-', '')}"
+NETWORK_NAME = 'Apr-08-2024' #'Feb-23-2023' #'Feb-26-2024'
+NETWORK_SUBFOLDER = f'Akira_{NETWORK_NAME.replace("-", "")}'
+# f"Leland_{NETWORK_NAME.replace('-', '')}"
 # f"Akira_{NETWORK_NAME.replace('-', '')}"
 
 # the predictions file holds a precomputed set of labels for the FILE_OF_INTEREST file
@@ -80,7 +84,11 @@ PREDICTIONS_FILENAME = os.path.join("sav", NETWORK_SUBFOLDER,
 # the csv file of interest is the file we want to compute the feature histograms for
 # if B-SOID has already ran on it, you might want to use a 'predictions.sav'
 # file to extract labels from to speed up the process
-CSVFILE_OF_INTEREST = []
+CSVFILE_OF_INTEREST = [
+    "20220228223808_320151_m1_openfieldDLC_resnet50_Q175-D2Cre Open Field Males BrownJan12shuffle1_1030000_filtered.csv"
+]
+# FROM AKIRA APR08-2024 NETWORK
+
 #     "20211018011357_242m12DLC_resnet50_Q175-D2Cre Open Field Males BrownJan12shuffle1_500000.csv",
 #     "20220228203032_316367_m2_openfieldDLC_resnet50_Q175-D2Cre Open Field Males BrownJan12shuffle1_500000.csv",
 #     "20220228223808_320151_m1_openfieldDLC_resnet50_Q175-D2Cre Open Field Males BrownJan12shuffle1_500000.csv",
@@ -120,9 +128,9 @@ SAVE_FIGURE = True
 LOGSCALE = True
 # whether to use adaptive or brute thresholding for filtering values
 # when runnign the adp_filt function - check its definition for more
-BRUTE_THRESHOLDING = True
+BRUTE_THRESHOLDING = False
 # This is the list of labels to show
-GROUPS_TO_SHOW = []# list(range(0, 38)) + list(range(39, 45))
+GROUPS_TO_SHOW = [0,1,5,9,10,12,14,15,17,22,24,28,29,30]
 
 
 # MAIN FUNCTION
@@ -180,22 +188,29 @@ def main(csvfile : str):
                     use_logscale=LOGSCALE)
 
 if __name__ == "__main__":
-    from feature_analysis_and_visualization.behavior_groups import BehaviorGrouping
+    # from feature_analysis_and_visualization.behavior_groups import BehaviorGrouping
     
-    LABEL_OF_INTEREST = "WallRearing"
+    # LABEL_OF_INTEREST = "WallRearing"
     
-    GROUPS_TO_SHOW = []
+    # GROUPS_TO_SHOW = []
 
-    bg = BehaviorGrouping(network_name=NETWORK_NAME)
-    for behavior_group, labels in bg.groupings_str.items():
-        if behavior_group == LABEL_OF_INTEREST:
-            GROUPS_TO_SHOW = labels
+    # bg = BehaviorGrouping(network_name=NETWORK_NAME)
+    # for behavior_group, labels in bg.groupings_str.items():
+    #     if behavior_group == LABEL_OF_INTEREST:
+    #         GROUPS_TO_SHOW = labels
     
-    if len(GROUPS_TO_SHOW) == 0: 
-        raise Exception(f"We couldn't find the behavior group {LABEL_OF_INTEREST}, " +
-                        "or no label seem to belong to it...")
+    # if len(GROUPS_TO_SHOW) == 0: 
+    #     raise Exception(f"We couldn't find the behavior group {LABEL_OF_INTEREST}, " +
+    #                     "or no label seem to belong to it...")
+
+    # also create non-existent folders if needed
+    if not os.path.exists(COMPUTED_FEATURE_SAVING_PATH):
+        os.mkdir(COMPUTED_FEATURE_SAVING_PATH)
+    if not os.path.exists(FIGURE_SAVING_PATH):
+        os.mkdir(FIGURE_SAVING_PATH)
 
     # automatically execute compute on every csv in the specified folder 
-    CSVFILE_OF_INTEREST = os.listdir(CSVFOLDER_PATH)
+    # CSVFILE_OF_INTEREST = os.listdir(CSVFOLDER_PATH)
+
     for csvfile in CSVFILE_OF_INTEREST:
         main(csvfile)
