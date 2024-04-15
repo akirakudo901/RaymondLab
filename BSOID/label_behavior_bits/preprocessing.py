@@ -129,3 +129,32 @@ def filter_bouts_smaller_than_N_frames(label : np.ndarray,
         # go to the next iteration, treating current 'forward' as label
         label = forward
     return label
+
+
+#########
+# UTILS #
+#########
+
+def repeating_numbers(labels):
+    """
+    :param labels: 1D array, predicted labels
+    :return n_list: 1D array, the label number
+    :return idx: 1D array, label start index
+    :return lengths: 1D array, how long each bout lasted for
+    """
+    i = 0
+    n_list = []
+    idx = []
+    lengths = []
+    while i < len(labels) - 1:
+        n = labels[i]
+        n_list.append(n)
+        startIndex = i
+        idx.append(i)
+        while i < len(labels) - 1 and labels[i] == labels[i + 1]:
+            i = i + 1
+        endIndex = i
+        length = endIndex - startIndex + 1
+        lengths.append(length)
+        i = i + 1
+    return n_list, idx, lengths

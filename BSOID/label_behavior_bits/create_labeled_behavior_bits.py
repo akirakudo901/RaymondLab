@@ -192,29 +192,6 @@ def sort_nicely(l):
         return [convert_int(c) for c in re.split('([0-9]+)', s)]
     l.sort(key=alphanum_key)
 
-def repeating_numbers(labels):
-    """
-    :param labels: 1D array, predicted labels
-    :return n_list: 1D array, the label number
-    :return idx: 1D array, label start index
-    :return lengths: 1D array, how long each bout lasted for
-    """
-    i = 0
-    n_list = []
-    idx = []
-    lengths = []
-    while i < len(labels) - 1:
-        n = labels[i]
-        n_list.append(n)
-        startIndex = i
-        idx.append(i)
-        while i < len(labels) - 1 and labels[i] == labels[i + 1]:
-            i = i + 1
-        endIndex = i
-        length = endIndex - startIndex + 1
-        lengths.append(length)
-        i = i + 1
-    return n_list, idx, lengths
 
 if __name__ == "__main__":
     FPS = 40

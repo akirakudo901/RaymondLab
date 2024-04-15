@@ -230,3 +230,4 @@ def helper_plot_feats(feature : np.ndarray, label : np.ndarray,
             f.write(f"Groups to be shown: {show_specific_groups}")
 
     if show_figure: plt.show()
+    else: plt.close()
