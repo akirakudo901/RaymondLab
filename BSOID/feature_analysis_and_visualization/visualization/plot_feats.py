@@ -1,6 +1,6 @@
 # Author: Akira Kudo
 # Created: -
-# Last updated: 2024/03/28
+# Last updated: 2024/04/03
 """
 Visualization functions and saving plots.
 """
@@ -8,13 +8,13 @@ Visualization functions and saving plots.
 from datetime import datetime
 import os
 import pytz
-import re
 from typing import Dict, List
 
 import matplotlib.pyplot as plt
 import numpy as np
 
 from feature_extraction.utils import relative_placement_name, relative_angle_name, displacement_name
+from feature_analysis_and_visualization.utils import get_mousename
 
 def plot_feats(feats: list, labels: list,
                show_specific_groups : List[int],
@@ -97,14 +97,6 @@ def plot_feats(feats: list, labels: list,
                           save_figure=save_figure,
                           use_logscale=use_logscale,
                           brute_thresholding=brute_thresholding)
-
-def get_mousename(filename : str):
-    # Extracting information from the filename using regular expressions
-    searched = re.search(r'(\d+)(_?)[mf](\d+)', filename)
-    if searched:
-       return searched[0].replace('_', '')
-    else:
-       return "No_Match"
 
 def get_newname(show_specific_groups, labels):
   vancouver_time = datetime.now(pytz.timezone('America/Vancouver'))

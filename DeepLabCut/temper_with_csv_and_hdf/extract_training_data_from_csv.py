@@ -4,7 +4,7 @@ import os
 
 import pandas as pd
 
-from convert_csv_to_hdf import convert_csv_to_hdf
+from DeepLabCut.temper_with_csv_and_hdf.convert_csv_hdf import convert_csv_to_hdf
 from select_n_images_based_on_label import select_n_images_based_on_label
 
 DATA_DIR = r"/media/Data/Raymond Lab/Q175-D2Cre Open Field Males/Q175-D2Cre Open Field Males Brown-Judy-2024-01-12/labeled-data/full_dataset_including_belly"
