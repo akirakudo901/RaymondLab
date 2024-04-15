@@ -1,6 +1,6 @@
 # Author: Akira Kudo
 # Created: -
-# Last updated: 2024/04/03
+# Last updated: 2024/04/15
 """
 Visualization functions and saving plots.
 """
@@ -223,10 +223,10 @@ def helper_plot_feats(feature : np.ndarray, label : np.ndarray,
                                                 timestr))))
           # also save a text file with its name being the name of the mouse csv
           # we used to generate these plots
-          txtname = csv_name.replace(".csv", ".txt")
+          txtname = "info.txt"
           with open(os.path.join(figure_save_dir, txtname), 'w') as f:
-            f.write(csv_name)
-            f.write(f"Use bruteforce vs. adaptive threshold: {'bruteforce' if brute_thresholding else 'adaptive'}")
+            f.write(csv_name + "\n")
+            f.write(f"Use bruteforce vs. adaptive threshold: {'bruteforce' if brute_thresholding else 'adaptive'}\n")
             f.write(f"Groups to be shown: {show_specific_groups}")
 
     if show_figure: plt.show()
