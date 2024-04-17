@@ -1,6 +1,6 @@
 # Author: Akira Kudo
 # Created: 2024/03/21
-# Last Updated: 2024/04/12
+# Last Updated: 2024/04/17
 
 import os
 from typing import List
@@ -16,7 +16,10 @@ LABEL_DELIMITER_VALUE = -1
 def quantify_label_occurrence_and_length_distribution(
         group_of_labels : List[List[np.ndarray]],
         group_names : List[str],
-        use_logscale : bool=False
+        save_dir : str,
+        save_name : str,
+        use_logscale : bool=False,
+        save_figure : bool=True
         ):
     """
     For each group of labels, quantifies and visualizes the occurrence 
@@ -28,7 +31,10 @@ def quantify_label_occurrence_and_length_distribution(
     :param List[List[np.ndarray]] group_of_labels: A list of groups of labels,
     which are each themselves a list of labels, that we want to quantify & visualize.
     :param List[str] group_names: The name of groups we wanna observe.
+    :param str save_dir: Path to the directory to save figures.
+    :param str save_name: Name of file to given when saving it.
     :param bool use_logscale: Whether to use log scale for y-axis of visualization.
+    :param bool save_figure: Whether to save figures. Defaults to True.
     """
     all_labels = np.concatenate([np.concatenate(gol) for gol in group_of_labels])
     unique_labels = np.unique(all_labels)
@@ -37,6 +43,7 @@ def quantify_label_occurrence_and_length_distribution(
 
     def visualize_frequency_from_numpy_array(group_of_labels : List[List[np.ndarray]],
                                              plot_title : str,
+                                             save_name : str,
                                              use_logscale : bool=True):
         # first group every label group into a single array
         to_be_grouped_labels = [[np.append(lbl, LABEL_DELIMITER_VALUE) for lbl in gol] 
@@ -88,11 +95,14 @@ def quantify_label_occurrence_and_length_distribution(
             ax.set_ylabel(name, labelpad=30)
             if use_logscale: ax.yscale('log')
         plt.suptitle(plot_title)
+        if save_figure:
+            plt.savefig(os.path.join(save_dir, save_name))
         plt.show()
     
     # first visualize the number of occurrence per label into an overlaid plot
     visualize_frequency_from_numpy_array(group_of_labels=group_of_labels, 
                                          plot_title="Raw Occurrence Of Labels",
+                                         save_name=save_name.replace('.png', '_Raw_Occurrence.png'),
                                          use_logscale=use_logscale)
     # then visualize the runs and their distributions
     group_run_values = [[find_runs(lbl)[0] for lbl in gol]
@@ -100,6 +110,7 @@ def quantify_label_occurrence_and_length_distribution(
     # then show their frequency of occurrence
     visualize_frequency_from_numpy_array(group_of_labels=group_run_values, 
                                          plot_title="Occurrence Of Behavior Snippets", 
+                                         save_name=save_name.replace('.png', '_Behavior_Snippets.png'),
                                          use_logscale=use_logscale)
 
 def quantify_labels_happening_less_than_N(labels : np.ndarray, n : int):
