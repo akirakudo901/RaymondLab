@@ -1,6 +1,6 @@
 # Author: Akira Kudo
 # Created: 2024/04/11
-# Last Updated: 2024/04/12
+# Last Updated: 2024/04/16
 
 import os
 import re
@@ -8,7 +8,7 @@ import re
 import numpy as np
 import pandas as pd
 
-from visualization.visualize_speed_of_bodypart import visualize_speed_of_bodypart_from_csv
+from visualization.visualize_speed_of_bodypart import visualize_speed_of_bodypart_from_csv, visualize_angle_of_bodypart_from_csv, visualize_property_of_bodypart_from_csv
 
 CSV_FOLDER = r"C:\Users\mashi\Desktop\temp\Q175\csvs"
 # r"Z:\Raymond Lab\2 Colour D1 D2 Photometry Project\B-SOID\Q175 Open Field CSVs\WT\snapshot2060000"
@@ -92,16 +92,44 @@ def sanity_check_read_and_parse_noise_dataframe():
 bodyparts2noise = read_and_parse_noise_dataframe(NOISE_CSV, start=START, end=END)
 
 # finally visualize the result
-visualize_speed_of_bodypart_from_csv(
+# visualize_speed_of_bodypart_from_csv(
+#     csv_path=CSV_PATH, 
+#     bodyparts=[
+#         'snout',
+#         'rightforepaw', 'leftforepaw',
+#         # 'righthindpaw', 
+#         # 'lefthindpaw',
+#         # 'tailbase', 'belly'
+#         ],
+#     start=START, end=END,
+#     bodyparts2noise=bodyparts2noise
+# )
+
+# visualize_angle_of_bodypart_from_csv(
+#     csv_path=CSV_PATH, 
+#     bodyparts=[
+#         'snout',
+#         'rightforepaw', 'leftforepaw',
+#         # 'righthindpaw', 
+#         # 'lefthindpaw',
+#         # 'tailbase', 
+#         # 'belly'
+#         ],
+#     start=START, end=END,
+#     bodyparts2noise=bodyparts2noise
+# )
+
+visualize_property_of_bodypart_from_csv(
     csv_path=CSV_PATH, 
     bodyparts=[
-        'snout',
+        # 'snout',
         'rightforepaw', 'leftforepaw',
         # 'righthindpaw', 
-        'lefthindpaw',
-        # 'tailbase', 'belly'
-        ],
+        # 'lefthindpaw',
+        # 'tailbase', 
+        # 'belly'
+        ], 
+    flag=5, 
     start=START, end=END,
     bodyparts2noise=bodyparts2noise
 )
-
