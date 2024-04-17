@@ -1,10 +1,10 @@
 # Author: Akira Kudo
 # Created: 2024/04/04
-# Last Updated: 2024/04/12
+# Last Updated: 2024/04/17
 
 import os
 
-from feature_analysis_and_visualization.analysis.quantify_labels import quantify_label_occurrence_and_length_distribution
+from feature_analysis_and_visualization.visualization.quantify_labels import quantify_label_occurrence_and_length_distribution
 from bsoid_io.utils import read_BSOID_labeled_csv
 
 YAC_FOLDER = r"C:\Users\mashi\Desktop\temp\YAC"
