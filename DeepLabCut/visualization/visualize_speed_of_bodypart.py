@@ -1,6 +1,6 @@
 # Author: Akira Kudo
 # Created: 2024/04/12
-# Last Updated: 2024/04/16
+# Last Updated: 2024/04/17
 
 from typing import Dict, List
 
@@ -168,7 +168,8 @@ def visualize_property_of_bodypart_from_csv(
     If given, which frame is noise is indicated for each body part.
     """
     DISPLACEMENT, ANGLE, ANGLE_CHANGE, ACCELERATION = 'Displacement', 'Angle', 'Angle Change', 'Acceleration'
-    flag_to_visual = {0:DISPLACEMENT, 1:ANGLE, 2:ANGLE_CHANGE, 3:ACCELERATION}
+    ACC_MINUS_DISP = "Acceleration Minus Displacement"
+    flag_to_visual = {0:DISPLACEMENT, 1:ANGLE, 2:ANGLE_CHANGE, 3:ACCELERATION, 4:ACC_MINUS_DISP}
 
     # inner helpers
     def smaller_arc_angle(angle : np.ndarray):
@@ -226,8 +227,21 @@ def visualize_property_of_bodypart_from_csv(
                 to_plot = np.insert(angle_diff, 0, 0) # padding
 
             elif vis == ACCELERATION:
-                to_plot = None
-                # TODO IMPLEMENT!
+                dXdt, dYdt = np.diff(X), np.diff(Y)
+                padded_dXdt, padded_dYdt = np.insert(dXdt, 0, 0), np.insert(dYdt, 0, 0) # padding
+                absolute_acceleration = np.sqrt(np.diff(padded_dXdt)**2 + np.diff(padded_dYdt)**2)
+                to_plot = np.insert(absolute_acceleration, 0, 0) # padding
+            
+            elif vis == ACC_MINUS_DISP:
+                displacement = np.sqrt(np.diff(X)**2 + np.diff(Y)**2)
+                displacement = np.insert(displacement, 0, 0) # padding
+
+                dXdt, dYdt = np.diff(X), np.diff(Y)
+                padded_dXdt, padded_dYdt = np.insert(dXdt, 0, 0), np.insert(dYdt, 0, 0) # padding
+                absolute_acceleration = np.sqrt(np.diff(padded_dXdt)**2 + np.diff(padded_dYdt)**2)
+                absolute_acceleration = np.insert(absolute_acceleration, 0, 0) # padding
+
+                to_plot = absolute_acceleration - displacement
             
             # render the frames that were noise beneath
             if bodyparts2noise is not None and bpt in bodyparts2noise.keys():
