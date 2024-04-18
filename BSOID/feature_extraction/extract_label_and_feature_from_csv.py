@@ -1,6 +1,6 @@
 # Author: Akira Kudo (Copying A TON from the B-SOiD project)
 # Created: 2024/03/19
-# Last updated: 2024/03/19
+# Last updated: 2024/04/17
 
 # These code files were copied on 2024/03/19 from 
 # Visualize_Feature_Distributions_Per_B_SOID_Bout_Cluster.ipynb and the code blocks
@@ -102,36 +102,42 @@ def extract_label_and_feature_from_csv(filepath : str, pose : List[int],
 
     if save_result:
         print(f"Saving results to: {save_path}")
-        np.save(os.path.join(save_path, feature_save_filename), feature)
-        np.save(os.path.join(save_path,   label_save_filename),   label)
-        # also save it as csv
-        # np.savetxt(), 
-        #            feature, delimiter=",", comments='')
-        # np.savetxt(os.path.join(save_path,   label_save_filename.replace('.npy', '.csv')), 
-        #              label, delimiter=",", comments='')
-        # specify which bodypart we consider - predicted from pose
-        bodyparts = []
-        for pose_val in pose:
-            bp = Bodypart(pose_val // 3)
-            if bp not in bodyparts:
-                bodyparts.append(bp)
-        feature_to_index_map = generate_guessed_map_of_feature_to_data_index(
-            bodyparts, short=True
-        )
-        # then create column names from those info
-        column_header = ["label"] + ["_tofill_"] * len(feature_to_index_map)
-        for feature_name, feature_idx in feature_to_index_map.items():
-           column_header[feature_idx + 1] = feature_name
-        # finally populate a dataframe with the given data
-        label = label[:feature.shape[1]] # truncate labels by the number of features
-        # len(labels) > len(features) as artifact of padding - have to double check
-        df_data = np.concatenate((np.expand_dims(label, axis=0), feature), 
-                                 axis=0).T
-        saved_df = pd.DataFrame(data=df_data, columns=column_header)
-        saved_df.to_csv(os.path.join(
-           save_path, 
-           feature_save_filename.replace(FEATURE_FILE_SUFFIX, '_labeled_features.csv')
-           ))
+        try:
+            if not os.path.exists(os.path.join(save_path, feature_save_filename)):
+                np.save(os.path.join(save_path, feature_save_filename), feature)
+            if not os.path.exists(os.path.join(save_path, label_save_filename)):
+                np.save(os.path.join(save_path, label_save_filename), label)
+            
+            if not os.path.exists(os.path.join(
+                save_path, 
+                feature_save_filename.replace(FEATURE_FILE_SUFFIX, '_labeled_features.csv')
+                )):
+                # specify which bodypart we consider - predicted from pose
+                bodyparts = []
+                for pose_val in pose:
+                    bp = Bodypart(pose_val // 3)
+                    if bp not in bodyparts:
+                        bodyparts.append(bp)
+                feature_to_index_map = generate_guessed_map_of_feature_to_data_index(
+                    bodyparts, short=True
+                )
+                # then create column names from those info
+                column_header = ["label"] + ["_tofill_"] * len(feature_to_index_map)
+                for feature_name, feature_idx in feature_to_index_map.items():
+                    column_header[feature_idx + 1] = feature_name
+                # finally populate a dataframe with the given data
+                label = label[:feature.shape[1]] # truncate labels by the number of features
+                # len(labels) > len(features) as artifact of padding - have to double check
+                df_data = np.concatenate((np.expand_dims(label, axis=0), feature), 
+                                        axis=0).T
+                saved_df = pd.DataFrame(data=df_data, columns=column_header)
+                saved_df.to_csv(os.path.join(
+                    save_path, 
+                    feature_save_filename.replace(FEATURE_FILE_SUFFIX, '_labeled_features.csv')
+                    ))
+        except Exception as e:
+            print(e)
+            print("Moving on...")
 
     return label, feature
 
