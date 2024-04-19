@@ -1,6 +1,6 @@
 # Author: Akira Kudo
 # Created: 2024/03/27
-# Last updated: 2024/04/12
+# Last updated: 2024/04/17
 
 import os
 from pathlib import Path
@@ -11,6 +11,7 @@ from feature_analysis_and_visualization.visualization.plot_feats import plot_fea
 
 from feature_extraction.utils import Bodypart, generate_guessed_map_of_feature_to_data_index
 from feature_extraction.extract_label_and_feature_from_csv import extract_label_and_feature_from_csv
+from feature_extraction.extract_pregenerated_labels_and_compute_features import extract_pregenerated_labels_and_compute_features
 
 """
 First: creates a set of directory to organizedly store data, like so:
@@ -186,6 +187,106 @@ def main(csvfile : str):
                     show_figure=SHOW_FIGURE,
                     save_figure=SAVE_FIGURE,
                     use_logscale=LOGSCALE)
+    
+
+def do_feature_visualization(csvfile: str, 
+                            csvfolder_path: str, 
+                            clf_sav_path: str, 
+                            predictions_path : str,
+                            computed_feature_saving_path: str,
+                            figure_saving_path: str, 
+                            bodyparts: list,
+                            groups_to_show: list, 
+                            relative_placement_pairs: list,
+                            relative_angle_pairs: list, 
+                            displacement_bodyparts: list, 
+                            show_figure: bool, 
+                            save_figure: bool,
+                            logscale: bool, 
+                            brute_thresholding: bool):
+    """
+    Plots features as analyzed and output by B-SOID.
+    1) Takes in an already analyzed csv path together with its
+       analysis-resulting predictions.
+    2) Extracts labels out of the csv.
+    3) Extracts kinematic features from the csv.
+    4) Plots the results, leveraging the labels & kinematics extracted.
+
+    :param str csvfile: The path to the csv file we analyze.
+    :param str csvfolder_path: The path to the folder containing the csv file.
+    :param str clf_sav_path: The path to the classifier saving location.
+    :param str predictions_path: The path to previous predictions.
+    :param str computed_feature_saving_path: The path to save computed features.
+    :param str figure_saving_path: The path to save generated figures.
+    :param list bodyparts: List of body parts for feature extraction.
+    :param list groups_to_show: Groups of features to show in plots.
+    :param list relative_placement_pairs: Pairs of body parts for relative placement.
+    :param list relative_angle_pairs: Pairs of body parts for relative angle calculations.
+    :param list displacement_bodyparts: Body parts for displacement calculations.
+    :param bool show_figure: Whether to show generated figures.
+    :param bool save_figure: Whether to save generated figures.
+    :param bool logscale: Whether to use log scale in plots.
+    :param bool brute_thresholding: Whether to use brute thresholding in plots.
+    """
+
+    # create non-existent folders if needed
+    Path(computed_feature_saving_path).mkdir(parents=True, exist_ok=True)
+    Path(figure_saving_path).mkdir(parents=True, exist_ok=True)
+    
+    csvfullpath = os.path.join(csvfolder_path, csvfile)
+
+    labels, features = None, None
+    # TODO FIX
+    if predictions_path is not None:
+        print("Extracting pregenerated labels and computing features!")
+        labels, features = extract_pregenerated_labels_and_compute_features(
+            predictions_path, csvfile, clf_sav_path=clf_sav_path, fps=40,
+            save_result=True, save_path=computed_feature_saving_path,
+            recompute=False,  load_path=computed_feature_saving_path
+            )
+        print("End.")
+    # TODO FIX END
+
+    if labels is None or features is None:
+        print("Extraction of pregenerated labels somehow failed...")
+        print("Computing both labels and features from csv!")
+        labels, features = extract_label_and_feature_from_csv(
+            filepath=csvfullpath, pose=POSE, clf_path=clf_sav_path, fps=40,
+            save_result=True, save_path=computed_feature_saving_path,
+            recompute=False, load_path=computed_feature_saving_path)
+        print("End.")
+
+    # generate map of features to guessed index
+    featname_to_idx_map = generate_guessed_map_of_feature_to_data_index(
+        bodyparts
+    )
+    # show the unfiltered mouse trajectory to check for gitter
+    plot_mouse_trajectory(csvpath=csvfullpath,
+                          figureName=os.path.basename(csvfullpath).replace('.csv', ''),
+                          start=0, end=None, bodypart="tailbase",
+                          show_figure=show_figure,
+                          save_figure=save_figure,
+                          save_path=os.path.join(figure_saving_path, "mouseTrajectory"))
+
+    # plot the features
+    plot_feats(features, labels,
+                groups_to_show,
+                relative_placement_pairs, relative_angle_pairs, displacement_bodyparts,
+                feature_to_index_map=featname_to_idx_map,
+                figure_save_dir=figure_saving_path,
+                csv_name=csvfile,
+                show_figure=show_figure, 
+                save_figure=save_figure,
+                use_logscale=logscale,
+                brute_thresholding=brute_thresholding)
+
+    plot_bout_length(labels,
+                    csv_name=csvfile,
+                    figure_save_dir=figure_saving_path,
+                    show_figure=show_figure,
+                    save_figure=save_figure,
+                    use_logscale=logscale)
+
 
 if __name__ == "__main__":
     # from feature_analysis_and_visualization.behavior_groups import BehaviorGrouping
@@ -202,12 +303,6 @@ if __name__ == "__main__":
     # if len(GROUPS_TO_SHOW) == 0: 
     #     raise Exception(f"We couldn't find the behavior group {LABEL_OF_INTEREST}, " +
     #                     "or no label seem to belong to it...")
-
-    # also create non-existent folders if needed
-    if not os.path.exists(COMPUTED_FEATURE_SAVING_PATH):
-        os.mkdir(COMPUTED_FEATURE_SAVING_PATH)
-    if not os.path.exists(FIGURE_SAVING_PATH):
-        os.mkdir(FIGURE_SAVING_PATH)
 
     # automatically execute compute on every csv in the specified folder 
     # CSVFILE_OF_INTEREST = os.listdir(CSVFOLDER_PATH)
