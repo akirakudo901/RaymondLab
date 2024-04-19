@@ -18,7 +18,10 @@ import pandas as pd
 from skimage.draw import disk
 from tqdm import tqdm
 
-from .preprocessing import adp_filt_bsoid_style, extract_label_from_labeled_csv, filter_bouts_smaller_than_N_frames
+from .preprocessing import adp_filt_bsoid_style, extract_label_from_labeled_csv, filter_bouts_smaller_than_N_frames, repeating_numbers
+from .extract_image_from_mp4 import extract_frame_by_number
+
+RESCALING_RATIO = 1/2 # ratio for rescaling images extracted in order to produce behavior bits
 
 # Given an image and corresponding coordinates for bodyparts, renders 
 # the bodyparts onto the image, to be returned.
@@ -53,9 +56,8 @@ def label_bodyparts_on_single_frame(
     # 1 - frames are reduced in dimension by twice when being extracted from the video
     #     and stored into saving folders by B-SOID
     def draw_size_adjusted_disk(image, color, center_x, center_y, dotsize, ny, nx):
-        ratio = 1/2
-        rr, cc = disk((center_y*ratio, center_x*ratio), 
-                      dotsize*ratio, 
+        rr, cc = disk((center_y*RESCALING_RATIO, center_x*RESCALING_RATIO), 
+                      dotsize*RESCALING_RATIO, 
                       shape=(ny, nx))
         image[rr, cc] = color
 
@@ -79,7 +81,8 @@ def label_bodyparts_on_single_frame(
 def create_labeled_behavior_bits(labels, 
                                  crit, 
                                  counts,
-                                 output_fps, 
+                                 output_fps,
+                                 video_path,
                                  frame_dir, 
                                  output_path, 
                                  data_csv_path,
@@ -93,12 +96,15 @@ def create_labeled_behavior_bits(labels,
     :param crit: scalar, minimum duration for random selection of behaviors (~300ms is advised)
     :param counts: scalar, number of generated examples (~5 is advised)
     :param output_fps: integer, frame per second for the output video
+    :param video_path: string, path to video from which to extract additional vid images
     :param frame_dir: string, directory to where you extracted vid images
     :param output_path: string, directory to where you want to store short video examples
 
     :param choose_from_top_or_random: Whether to choose 'counts' groups at random or from the 
     top N 'counts' in terms of length. If not "random", chooses the top 'counts'.
     """
+    EXTRACTED_FRAME_NAME = 'frame.png'
+
     print(f"Generating video snippets for: |{os.path.basename(data_csv_path)}| under {data_csv_path}.")
     if not os.path.exists(output_path):
         os.mkdir(output_path)
@@ -122,13 +128,7 @@ def create_labeled_behavior_bits(labels,
     # map bodyparts to color
     keep = np.flatnonzero(np.isin(all_bpts, bodyparts2plot))
     bpts2color = [(ind, colors[ind]) for ind in keep]
-    
-    # get list of images to render
-    images = [img for img in os.listdir(frame_dir) if img.endswith(".png")]
-    sort_nicely(images)
-    fourcc = cv2.VideoWriter_fourcc(*'avc1')
-    frame = cv2.imread(os.path.join(frame_dir, images[0]))
-    height, width, _ = frame.shape
+
     # extract snippets longer than crit
     n, idx, lengths = repeating_numbers(labels)
     if choose_from_top_or_random != "random":
@@ -141,6 +141,10 @@ def create_labeled_behavior_bits(labels,
     idx2 = [i 
             for i, j in enumerate(lengths) 
             if j >= crit]
+    
+    # set up some video things
+    fourcc = cv2.VideoWriter_fourcc(*'avc1')
+    height, width = None, None
 
     for i in tqdm(np.unique(labels)):
         # a: a set of range objects indicating which of those in rnges is for bout i
@@ -151,23 +155,39 @@ def create_labeled_behavior_bits(labels,
             generated_rnges = random.sample(a, min(len(a), counts))
             video_name_part = "example"
         else:
-            # generated_rnges = sorted(
-            #     a, key=lambda rng: len(rng), 
-            #     reverse=True)[:min(len(a), counts)]
             generated_rnges = heapq.nlargest(
                 min(len(a), counts), a, key=lambda rng: len(rng)
                 )
             video_name_part = "top"
         
+        if len(generated_rnges) == 0: return
+
+        present_img_indices = [re.findall('\d+',img)[-1] for img in os.listdir(frame_dir) 
+                               if str(img).endswith(".png")]
+
+        # get list of images to render, while extracting those we newly need
+        img_idx_to_extract = [frame_num for rng in generated_rnges for frame_num in rng
+                              if frame_num not in present_img_indices]
+        if len(img_idx_to_extract) != 0:
+            extract_frame_by_number(input_file=video_path, 
+                                    output_file=os.path.join(frame_dir, EXTRACTED_FRAME_NAME),
+                                    frame_numbers=img_idx_to_extract, 
+                                    scaling_factor=RESCALING_RATIO)
+        # get width and height of images
+        if height is None:
+            frame = cv2.imread(os.path.join(
+                frame_dir, EXTRACTED_FRAME_NAME.replace('.png', f'{generated_rnges[0][0]}.png'))
+                )
+            height, width, _ = frame.shape
+        
         # generate videos
         try:
 
-            for k in range(len(generated_rnges)):
+            for k, rng in enumerate(generated_rnges):
                 video_name = 'group_{}_{}{}.mp4'.format(i, video_name_part, k+1)
                 video = cv2.VideoWriter(os.path.join(subfolder, video_name), fourcc, output_fps, (width, height))
-                for l in generated_rnges[k]:
-                    image = images[l]
-                    ### MAIN CHANGE ###
+                for l in rng:
+                    image = EXTRACTED_FRAME_NAME.replace('.png', f'{l}.png')
                     read_img = cv2.imread(os.path.join(frame_dir, image))
                     labeled_img = label_bodyparts_on_single_frame(read_img,
                                                                     index=l,
@@ -177,7 +197,6 @@ def create_labeled_behavior_bits(labels,
                                                                     bpts2color=bpts2color,
                                                                     trailpoints=trailpoints)
                     video.write(labeled_img)
-                    ### MAIN CHANGE END ###
                 cv2.destroyAllWindows()
                 video.release()
         except:
