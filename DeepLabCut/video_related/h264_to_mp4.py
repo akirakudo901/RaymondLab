@@ -1,40 +1,54 @@
 import ffmpy
 import os
 import cv2
-# Change the path below to the folder that your h264 files are in
-# In terminal, enter cd /media/Data/'Raymond Lab'  [or whatever directory this file is in]
-# Then enter conda activate mpi_analysis_gpu
-# Then enter ipython h264_to_mp4.py 
+
+# To execute in Anaconda Prompt:
+# 1. Change VIDEO_PATHS to the list of paths to h246 we wanna convert
+# 2. Enter:      conda activate mpi_analysis_gpu
+# 3. Enter:      python PATH_TO_THIS_FILE 
+#    replacing PATH_TO_THIS_FILE with the actual path to this file. E.g.:
+#    python "Z:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\RaymondLab\DeepLabCut\video_related\h264_to_mp4.py"
  
-def convert2mp4(vid,framerate):
-    current_path = os.getcwd()
-    #vid=vid_path +'/raw.h264'
-    path = os.path.dirname(vid)
-    bname = os.path.basename(vid)[:-5]
-    os.chdir(path)
-    ff = ffmpy.FFmpeg(inputs={f'{bname}.h264': f' -r {framerate} -i {bname}.h264'},outputs={f'{bname}.mp4':'-vcodec copy'})
+def convert2mp4(video_path : str, framerate : int):
+    """
+    Converts a given h264 file to mp4.
+
+    :param str video_path: Path to the video to convert.
+    :param int framerate: Framerate of the created video.
+    """
+    videoname = os.path.basename(video_path)
+    video_path_mp4 = video_path.replace('.h264', '.mp4')
+    # double check vid is a h264 file
+    if not videoname.endswith('.h264'):
+        raise Exception(f"The passed file path {videoname} needs to be a h264...")
+    
+    # execute the ffmpy command
+    ff = ffmpy.FFmpeg(
+        inputs={f'{video_path}': f' -r {framerate}'},
+        outputs={f'{video_path_mp4}':'-vcodec copy'}
+        )
     try:
         ff.run()
         print('mp4 file generated')
     except Exception as e:
         print(e)
         print('please check folder path')
-    vid = cv2.VideoCapture(f'{bname}.mp4')
-    vid_length=int(vid.get(cv2.CAP_PROP_FRAME_COUNT))
-    vid.release()
-    os.chdir(current_path)
+
+    video = cv2.VideoCapture(f'{video_path_mp4}')
+    vid_length = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
+    video.release()
+    
     return vid_length
 
-#path='/media/Data/Raymond Lab/YAC128-D2Cre Open Field/Open Field Videos/Females/YAC128/' # enter path here end with /
-framerate=40
-path='/media/Data/Raymond Lab/Q175-D2Cre Open Field Males/Q175-D2Cre Open Field Males Brown-Judy-2024-01-12/videos/temp_for_conversion/'
 
+if __name__ == "__main__":
+    VIDEO_FOLDER_PATH = r"Z:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira_newQ175_to_convert"
+    FRAMERATE = 40
 
-
-files = [path+i for i in os.listdir(path)]
-for file in files:
-    n_frames=convert2mp4(file,framerate)
-    print(n_frames)# probably want to save this just to check if the number of frames is correct
+    for file_path in [os.path.join(VIDEO_FOLDER_PATH, file) for file in os.listdir(VIDEO_FOLDER_PATH)]:
+        n_frames = convert2mp4(file_path, FRAMERATE)
+        # check if the number of frames is correct
+        print(n_frames)
 
 
 
