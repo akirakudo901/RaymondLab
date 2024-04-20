@@ -1,12 +1,12 @@
 # Author: Akira Kudo
 # Created: 2024/03/16
-# Last updated: 2024/04/19
+# Last updated: 2024/04/20
 
 import os
 
 import ffmpy
 
-def scale_image_by_n(img_path : str, n : float, outdir : str, newname : str=None):
+def scale_image_by_n(img_path : str, n : float, outdir : str, newname : str=None, overwrite : bool=False):
     """
     Scales a given image file by n, giving it a new name and writing it to 'outdir'.
     :param str img_path: Path to image to be scaled, png/jpg.
@@ -14,14 +14,15 @@ def scale_image_by_n(img_path : str, n : float, outdir : str, newname : str=None
     :param str outdir: The output directory to which the scaled image is output.
     :param str newname: The new name given to the scaled image. If not given with 
     extension, extension of the input is used. If not given at all, a name is given.
+    :param bool overwrite: Overwrite when target output file exists, defaults to False.
     """
     if not img_path.endswith('.png') and not img_path.endswith('.jpg') and \
        not img_path.endswith('.jpeg'): 
         raise Exception("img_path doesn't seem to specify a png/jpg file...")
     
-    _scale_something_by_n_using_ffmpy(obj_path=img_path, n=n, outdir=outdir, newname=newname)
+    _scale_something_by_n_using_ffmpy(obj_path=img_path, n=n, outdir=outdir, newname=newname, overwrite=overwrite)
 
-def scale_mp4_by_n(vid_path : str, n : float, outdir : str, newname : str=None):
+def scale_mp4_by_n(vid_path : str, n : float, outdir : str, newname : str=None, overwrite : bool=False):
     """
     Scales a given image file by n, giving it a new name and writing it to 'outdir'.
     :param str vid_path: Path to video to be scaled, mp4.
@@ -29,18 +30,20 @@ def scale_mp4_by_n(vid_path : str, n : float, outdir : str, newname : str=None):
     :param str outdir: The output directory to which the scaled video is output.
     :param str newname: The new name given to the scaled video. If not given with 
     extension, extension of the input is used. If not given at all, a name is given.
+    :param bool overwrite: Overwrite when target output file exists, defaults to False.
     """
     if not vid_path.endswith('.mp4'):
         raise Exception("vid_path doesn't seem to specify an mp4 file...")
     
-    _scale_something_by_n_using_ffmpy(obj_path=vid_path, n=n, outdir=outdir, newname=newname)
+    _scale_something_by_n_using_ffmpy(obj_path=vid_path, n=n, outdir=outdir, newname=newname, overwrite=overwrite)
 
 
 # HELPER
 def _scale_something_by_n_using_ffmpy(obj_path : str, 
                                       n : float, 
                                       outdir : str, 
-                                      newname : str=None):
+                                      newname : str=None,
+                                      overwrite : bool=False):
     """
     Scales a given image / mp4 file by n, giving it a new name and writing it to 'outdir'.
     :param str obj_path: Path to object to be scaled, png/jpg/mp4.
@@ -48,6 +51,7 @@ def _scale_something_by_n_using_ffmpy(obj_path : str,
     :param str outdir: The output directory to which the scaled object is output.
     :param str newname: The new name given to the scaled object. If not given with 
     extension, extension of the input is used. If not given at all, a name is given.
+    :param bool overwrite: Overwrite when target output file exists, defaults to False.
     """
     
     # manipulate names as needed
@@ -60,7 +64,7 @@ def _scale_something_by_n_using_ffmpy(obj_path : str,
     elif '.' not in newname: # append extension as needed
         newname = f'{newname}.{ext}'
         
-    if os.path.exists(os.path.join(outdir, newname)):
+    if not overwrite and os.path.exists(os.path.join(outdir, newname)):
         print(f"{newname} already exists in {outdir}!")
         return
     

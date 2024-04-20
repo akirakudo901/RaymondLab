@@ -3,12 +3,14 @@
 # Last Updated: 2024/04/20
 
 import os
+import sys
 
 import pandas as pd
 
 def scale_dlc_label_csv_by_n(csv_path : str, n : float, outdir : str, 
                              new_video_name : str=None, new_name : str=None, 
-                             new_scorer : str=None, also_do_hdf : bool=False):
+                             new_scorer : str=None, also_do_hdf : bool=False,
+                             overwrite : bool=False):
     """
     Scales the numerical values contained in a given dlc label csv by n, outputting it
     to outdir while setting it a new name (generated if not given).
@@ -23,6 +25,7 @@ def scale_dlc_label_csv_by_n(csv_path : str, n : float, outdir : str,
     :param str new_name: New name of generated file, defaults to auto-generation.
     :param str new_scorer: A new 'scorer' for the scorer entry, defaults to no change.
     :param bool also_do_hdf: Whether to also output hdf of the same name. Defaults to False.
+    :param bool overwrite: Overwrite when target output file exists, defaults to False.
     """
     df = pd.read_csv(csv_path, index_col=[0,1,2], header=[0,1,2])
     df = df * n
@@ -38,7 +41,12 @@ def scale_dlc_label_csv_by_n(csv_path : str, n : float, outdir : str,
                                             ).replace(
                                         '.csv', f'_rescaled_by_{filesafe_n}.csv'
                                            )
-    rescaled_csv_path = os.path.join(outdir, new_name)    
+    rescaled_csv_path = os.path.join(outdir, new_name)
+    
+    if not overwrite and os.path.exists(rescaled_csv_path):
+        print(f"Target file already exists... : {rescaled_csv_path}")
+        sys.exit(1)
+    
     df.to_csv(rescaled_csv_path, index=True)
     # then rename the scorer & filename as index
     with open(rescaled_csv_path, 'r+') as f:
@@ -58,6 +66,10 @@ def scale_dlc_label_csv_by_n(csv_path : str, n : float, outdir : str,
     
     rescaled_hdf_path = rescaled_csv_path.replace('.csv', '.h5')
     if also_do_hdf:
+        if not overwrite and os.path.exists(rescaled_hdf_path):
+            print(f"Target file already exists... : {rescaled_hdf_path}")
+            sys.exit(1)
+
         new_df = pd.read_csv(rescaled_csv_path, index_col=[0,1,2], header=[0,1,2])
         new_df.to_hdf(rescaled_hdf_path, key="rescaled", index=True)
         print(f"Hdf generated at: {rescaled_hdf_path}!")
