@@ -8,7 +8,7 @@ import sys
 import pandas as pd
 
 def scale_dlc_label_csv_by_n(csv_path : str, n : float, outdir : str, 
-                             new_video_name : str=None, new_name : str=None, 
+                             video_postfix : str=None, new_name : str=None, 
                              new_scorer : str=None, also_do_hdf : bool=False,
                              overwrite : bool=False):
     """
@@ -20,8 +20,8 @@ def scale_dlc_label_csv_by_n(csv_path : str, n : float, outdir : str,
     :param str csv_path: Path to csv holding dlc data.
     :param float n: Scaling factor.
     :param str outdir: Path to target directory for output.
-    :param str new_video_name: Name of videos the label data is indicated to come from,
-    defaults to no change.
+    :param str video_postfix: Postfix added to the name of videos the label data is 
+    indicated to come from, defaults to auto-generation.
     :param str new_name: New name of generated file, defaults to auto-generation.
     :param str new_scorer: A new 'scorer' for the scorer entry, defaults to no change.
     :param bool also_do_hdf: Whether to also output hdf of the same name. Defaults to False.
@@ -29,18 +29,20 @@ def scale_dlc_label_csv_by_n(csv_path : str, n : float, outdir : str,
     """
     df = pd.read_csv(csv_path, index_col=[0,1,2], header=[0,1,2])
     df = df * n
+    filesafe_n = str(n).replace('.', 'point')
+    rescaled_postfix = f'_rescaled_by_{filesafe_n}'
     # get old_scoere if new_scorer is given
     if new_scorer is not None:
         old_scorer = os.path.basename(csv_path).replace('CollectedData_', '').replace('.csv', '')
     # if new_name is not given, define it
     if new_name is None:
-        filesafe_n = str(n).replace('.', 'point')
-
         new_name = os.path.basename(csv_path).replace(
                                         old_scorer, new_scorer
                                             ).replace(
-                                        '.csv', f'_rescaled_by_{filesafe_n}.csv'
+                                        '.csv', f'{rescaled_postfix}.csv'
                                            )
+    if video_postfix is None:
+        video_postfix = rescaled_postfix
     rescaled_csv_path = os.path.join(outdir, new_name)
     
     if not overwrite and os.path.exists(rescaled_csv_path):
@@ -56,9 +58,9 @@ def scale_dlc_label_csv_by_n(csv_path : str, n : float, outdir : str,
         if new_scorer is not None:
             lines[0] = lines[0].replace(old_scorer, new_scorer)
         # as well as the video name
-        if new_video_name is not None:        
-            old_video_name = lines[3].split(',')[1]
-            lines = [l.replace(old_video_name, new_video_name) for l in lines]
+        for line_idx in range(3, len(lines)):
+            old_video_name = lines[line_idx].split(',')[1]
+            lines[line_idx] = lines[line_idx].replace(old_video_name, old_video_name + video_postfix)
         # save the result 
         f.seek(0); f.truncate() # delete what was already there
         f.writelines(lines)
@@ -88,7 +90,8 @@ if __name__ == "__main__":
 
     scale_dlc_label_csv_by_n(csv_path=CSV_PATH, n=N, 
                              outdir=OUTDIR,
-                             new_video_name='new_video', 
+                             video_postfix=None, 
                              new_name="CollectedData_Akira.csv", 
                              new_scorer='Akira', 
-                             also_do_hdf=True)
+                             also_do_hdf=True, 
+                             overwrite=True)
