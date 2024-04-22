@@ -1,6 +1,6 @@
 # Author: Akira Kudo
 # Created: 2024/03/21
-# Last Updated: 2024/04/17
+# Last Updated: 2024/04/22
 
 import os
 from typing import List
@@ -32,10 +32,13 @@ def quantify_label_occurrence_and_length_distribution(
     which are each themselves a list of labels, that we want to quantify & visualize.
     :param List[str] group_names: The name of groups we wanna observe.
     :param str save_dir: Path to the directory to save figures.
-    :param str save_name: Name of file to given when saving it.
+    :param str save_name: Name of file to given when saving it, png. Will append the
+    description of each generated figure when saving.
     :param bool use_logscale: Whether to use log scale for y-axis of visualization.
     :param bool save_figure: Whether to save figures. Defaults to True.
     """
+    if not save_name.endswith('.png'): save_name += '.png'
+
     all_labels = np.concatenate([np.concatenate(gol) for gol in group_of_labels])
     unique_labels = np.unique(all_labels)
     R = np.linspace(0, 1, len(unique_labels))
