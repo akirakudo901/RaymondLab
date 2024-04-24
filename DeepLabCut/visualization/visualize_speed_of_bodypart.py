@@ -137,6 +137,46 @@ def visualize_angle_of_bodypart_from_csv(
     plt.suptitle("Body Parts Angles Over Time")
     plt.show()
 
+def visualize_likelihood_of_bodypart_from_csv(
+        csv_path : str,
+        bodyparts : List[str],
+        start : int,
+        end : int,
+        bodyparts2noise : Dict[str, np.ndarray]=None
+        ):
+    """
+    Visualizes the probability of prediction for specified 
+    body parts, between frames start and end inclusive.
+    If given with bodyparts2noise, can also visualize which frame 
+    count as noise frame.
+
+    :param str csv_path: Path to csv holding dlc data.
+    :param List[str] bodyparts: List of body part names to visualize.
+    :param int start: Frame number where to start visualization.
+    :param int end: Frame number last shown in the visualization.
+    :param Dict[str,np.ndarray] bodyparts2noise: Dictionary mapping 
+    each body part to their identified noise frames, as boolean array.
+    If given, which frame is noise is indicated for each body part.
+    """
+    
+    df = read_dlc_csv_file(csv_path)
+    existing_bodyparts = np.unique(df.columns.get_level_values('bodyparts')).tolist()
+    concerned_bodyparts = [b for b in bodyparts if b in existing_bodyparts]
+    if len(concerned_bodyparts) == 0: return
+
+    # extract likelihood info
+    likelihoods = np.array([df.loc[:, (bpt, 'likelihood')].T for bpt in concerned_bodyparts]).T
+    
+    # visualize using visualize_given_property_and_color_noise
+    to_render = ["Likelihood"]
+    df = pd.DataFrame(likelihoods, columns=pd.MultiIndex.from_product(
+        (to_render, concerned_bodyparts),
+        names=['visualizations', 'bodyparts']))
+    
+    # finally run the rendering
+    visualize_given_property_and_color_noise(
+        df=df, to_render=to_render, bodyparts=concerned_bodyparts,
+        start=start, end=end, bodyparts2noise=bodyparts2noise)
 
 def visualize_property_of_bodypart_from_csv(
         csv_path : str,
