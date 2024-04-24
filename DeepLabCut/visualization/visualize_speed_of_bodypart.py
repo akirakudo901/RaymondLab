@@ -1,12 +1,13 @@
 # Author: Akira Kudo
 # Created: 2024/04/12
-# Last Updated: 2024/04/17
+# Last Updated: 2024/04/24
 
 from typing import Dict, List
 
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 
 from dlc_io.utils import read_dlc_csv_file
 from utils_to_be_replaced_oneday import bodypart_abbreviation_dict
@@ -198,20 +199,13 @@ def visualize_property_of_bodypart_from_csv(
     concerned_bodyparts = [b for b in bodyparts if b in existing_bodyparts]
     if len(concerned_bodyparts) == 0: return
 
-    # start visualization
-    _, axes = plt.subplots(len(concerned_bodyparts) * len(to_render), 1, 
-                           figsize=(20, len(concerned_bodyparts)*len(to_render)*3))
-    
-    for bpt_idx, bpt in enumerate(concerned_bodyparts):
-        X, Y = df.loc[start:end, (bpt, 'x')], df.loc[start:end, (bpt, 'y')]
-        
-        # for each visualization
-        for vis_type_idx, vis in enumerate(to_render):
-            if len(concerned_bodyparts) * len(to_render) == 1:
-                ax = axes
-            else:
-                ax = axes[bpt_idx * len(to_render) + vis_type_idx]
-            
+    # construct a pandas dataframe to pass to visualize_given_property_and_color_noise
+    # for each visualization & for each body part, stack the results to make a df
+    data_cols = []
+    for vis in to_render:
+        for bpt in concerned_bodyparts:
+            X, Y = df.loc[:, (bpt, 'x')], df.loc[:, (bpt, 'y')]
+
             if vis == DISPLACEMENT:
                 displacement = np.sqrt(np.diff(X)**2 + np.diff(Y)**2)
                 to_plot = np.insert(displacement, 0, 0) # padding
@@ -242,6 +236,83 @@ def visualize_property_of_bodypart_from_csv(
                 absolute_acceleration = np.insert(absolute_acceleration, 0, 0) # padding
 
                 to_plot = absolute_acceleration - displacement
+            
+            data_cols.append(to_plot)
+    
+    # stack data columns to create a dataframe-worthy map
+    data = np.array(data_cols).T
+    df = pd.DataFrame(data, columns=pd.MultiIndex.from_product(
+        (to_render, concerned_bodyparts),
+        names=['visualizations', 'bodyparts']))
+    
+    # finally run the rendering
+    visualize_given_property_and_color_noise(
+        df=df, to_render=to_render, bodyparts=concerned_bodyparts,
+        start=start, end=end, bodyparts2noise=bodyparts2noise)
+    
+        
+def visualize_given_property_and_color_noise(
+        df : pd.DataFrame,
+        to_render : List[str], # name of rendered visualizations
+        bodyparts : List[str],
+        start : int,
+        end : int,
+        bodyparts2noise : Dict[str, np.ndarray]=None
+        ):
+    """
+    Visualizes properties as specified by name in 'to_render', which data 
+    are specified as 'df'.
+    
+    This is done between specified body parts, between frames 
+    'start' and 'end' inclusive.
+    
+    If given with bodyparts2noise, can also visualize which frame 
+    count as noise frame.
+
+    :param pd.DataFrame df: Dataframe holding info to plot, as multiindex of 
+    [visualizations x bodyparts]. visualization_types should match exactly
+    the entry in to_render, or they are ignored.
+    :param List[str] to_render: List of names of properties to render from df.
+    Matching values between to_render and entries in df's 'visualization_types' 
+    level will be rendered.
+    :param List[str] bodyparts: List of body part names to visualize.
+    :param int start: Frame number where to start visualization.
+    :param int end: Frame number last shown in the visualization.
+    :param Dict[str,np.ndarray] bodyparts2noise: Dictionary mapping 
+    each body part to their identified noise frames, as boolean array.
+    If given, which frame is noise is indicated for each body part.
+    """
+    if len(to_render) == 0: return
+    if df.shape[0] < end: 
+        raise Exception(f"Specified end: {end} exceeds dataframe's number of rows...")
+
+    # read data
+    existing_bodyparts = np.unique(df.columns.get_level_values('bodyparts')).tolist()
+    concerned_bodyparts = [b for b in bodyparts if b in existing_bodyparts]
+    if len(concerned_bodyparts) == 0: return
+
+    # check we have data for all visualization types
+    visualization_types = df.columns.get_level_values('visualizations').tolist()
+    for vis in to_render: 
+        if vis not in visualization_types:
+            print(f"Could not identify {vis} as being part of the dataframe; please double check...")
+            to_render.remove(vis)
+    if len(concerned_bodyparts) == 0: return
+
+    # start visualization
+    _, axes = plt.subplots(len(concerned_bodyparts) * len(to_render), 1, 
+                           figsize=(20, len(concerned_bodyparts)*len(to_render)*3))
+    
+    for bpt_idx, bpt in enumerate(concerned_bodyparts):
+        
+        # for each visualization
+        for vis_type_idx, vis in enumerate(to_render):
+            if len(concerned_bodyparts) * len(to_render) == 1:
+                ax = axes
+            else:
+                ax = axes[bpt_idx * len(to_render) + vis_type_idx]
+            
+            to_plot = df.loc[start:end, (vis, bpt)]
             
             # render the frames that were noise beneath
             if bodyparts2noise is not None and bpt in bodyparts2noise.keys():
