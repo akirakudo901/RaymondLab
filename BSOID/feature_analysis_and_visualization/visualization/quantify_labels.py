@@ -1,6 +1,6 @@
 # Author: Akira Kudo
 # Created: 2024/03/21
-# Last Updated: 2024/04/22
+# Last Updated: 2024/04/23
 
 import os
 from typing import List
@@ -19,7 +19,8 @@ def quantify_label_occurrence_and_length_distribution(
         save_dir : str,
         save_name : str,
         use_logscale : bool=False,
-        save_figure : bool=True
+        save_figure : bool=True,
+        show_figure : bool=True
         ):
     """
     For each group of labels, quantifies and visualizes the occurrence 
@@ -36,6 +37,7 @@ def quantify_label_occurrence_and_length_distribution(
     description of each generated figure when saving.
     :param bool use_logscale: Whether to use log scale for y-axis of visualization.
     :param bool save_figure: Whether to save figures. Defaults to True.
+    :param bool show_figure: Whether to show figures. Defaults to True.
     """
     if not save_name.endswith('.png'): save_name += '.png'
 
@@ -100,7 +102,10 @@ def quantify_label_occurrence_and_length_distribution(
         plt.suptitle(plot_title)
         if save_figure:
             plt.savefig(os.path.join(save_dir, save_name))
-        plt.show()
+        if show_figure:
+            plt.show()
+        else:
+            plt.close()
     
     # first visualize the number of occurrence per label into an overlaid plot
     visualize_frequency_from_numpy_array(group_of_labels=group_of_labels, 
