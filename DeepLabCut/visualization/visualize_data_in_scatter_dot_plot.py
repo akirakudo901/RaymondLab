@@ -1,6 +1,6 @@
 # Author: Akira Kudo
 # Created: 2024/04/26
-# Last Updated: 2024/04/27
+# Last Updated: 2024/04/28
 
 import os
 
@@ -86,11 +86,17 @@ def visualize_data_in_scatter_dot_plot(csv_path : str,
                        color=colors[i], linestyle=MEDIAN_LINESTYPE)
     
     # set the legend manually for median and mean
-    median_line = mlines.Line2D([],[], color='black', 
-                                linestyle=MEDIAN_LINESTYPE, label='Median')
-    mean_line   = mlines.Line2D([],[], color='black', 
-                                linestyle=MEAN_LINESTYPE,   label='Mean')
-    plt.legend(handles=[median_line, mean_line])
+    handles = []
+    if show_median:
+        median_line = mlines.Line2D([],[], color='black', 
+                                    linestyle=MEDIAN_LINESTYPE, label='Median')
+        handles.append(median_line)
+    if show_mean:
+        mean_line   = mlines.Line2D([],[], color='black', 
+                                    linestyle=MEAN_LINESTYPE,   label='Mean')
+        handles.append(mean_line)
+    
+    plt.legend(handles=handles)
     # set the other settingss
     plt.xlabel(xlabel); plt.ylabel(ylabel)
     plt.suptitle(title)
@@ -111,7 +117,7 @@ if __name__ == "__main__":
     
     CSV_DIR = r"C:\Users\mashi\Desktop\temp\Q175\basic_analysis"
     # CSV_DIR = r"Z:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\previous\openfield\3part1 MatlabAndPrismAnalysis\MATLAB\openfield_photometry_30min_DLC\data\results"
-    CSV_NAME = "Q175_analysis_data_trunc_unfilt.csv"
+    CSV_NAME = "Q175_analysis_data_trunc_filt.csv"
     CSVFILE = os.path.join(CSV_DIR, CSV_NAME)
 
     MOUSE_GROUPNAME = "Q175"
@@ -140,6 +146,6 @@ if __name__ == "__main__":
                                             save_name=fig_name,
                                             show_figure=False,
                                             show_mean=True,
-                                            show_median=True)
+                                            show_median=False)
     
    
