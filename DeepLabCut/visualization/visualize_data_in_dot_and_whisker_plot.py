@@ -13,7 +13,7 @@ MOUSETYPE = 'mouseType'
 TIME_FRACTION_BY_QUADRANT = 'timeFractionByQuadrant'
 DISTANCE_BY_INTERVALS = 'distanceByIntervals'
 
-def visualize_data_in_scatter_dot_plot(csv_path : str,
+def visualize_data_in_dot_and_whisker_plot(csv_path : str,
                                         ylabel : str,
                                         x_vals : list,
                                         y_vals : list,
@@ -118,7 +118,7 @@ if __name__ == "__main__":
     # DISTANCE_BY_INTERVALS : 'Distance By Intervals (cm)'
     
     for visualized_var, x_vals, xlabel, var_name, fig_name in to_visualize:
-        visualize_data_in_scatter_dot_plot(CSVFILE,
+        visualize_data_in_dot_and_whisker_plot(CSVFILE,
                                             x_vals=x_vals,
                                             y_vals=visualized_var,
                                             xlabel=xlabel,
