@@ -1,9 +1,10 @@
 # Author: Akira Kudo
 # Created: 2024/04/27
-# Last Updated: 2024/04/27
+# Last Updated: 2024/04/28
 
 import os
 import shutil
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -140,6 +141,8 @@ def store_which_csv_to_truncate_and_when(csv_folder : list,
                 new_row = [mousename, len(less_than_threshold_indices) != 0, min_frame, min_timestamp]
                 if new_row not in data:
                     data.append(new_row)
+            except KeyboardInterrupt as k:
+                raise k
             except:
                 print(f"File {file} wasn't successfully read as DLC csv; under {folder}...")
     
@@ -197,7 +200,7 @@ def truncate_given_csv_at_specified_timepoint(csv_path : str,
         outdir = os.path.dirname(csv_path)
     filename = os.path.basename(csv_path)
 
-    df = read_dlc_csv_file(csv_path)
+    df = read_dlc_csv_file(csv_path, include_scorer=True)
     if df.shape[0] < truncate_frame:
         raise Exception(f"Csv has less timepoints than given truncated_frame {truncate_frame}...")
     
@@ -206,42 +209,95 @@ def truncate_given_csv_at_specified_timepoint(csv_path : str,
     
 if __name__ == "__main__":
 
-    SAVE_DIR = r"C:\Users\mashi\Desktop\temp\RaymondLab\DeepLabCut\COMPUTED\fig"
+    SAVE_DIR = r"C:\Users\mashi\Desktop\temp\RaymondLab\DeepLabCut\COMPUTED\fig\YAC128"
 
-    ABOVE_CSV_DIR = r"C:\Users\mashi\Desktop\temp\Q175\csvs\iter4-2060000\pretrunc"
+    ABOVE_CSV_DIR = r"C:\Users\mashi\Desktop\temp\YAC128\DLC_csvs\mix-it1-1030k-it3-2100k\pretrunc"
+    # r"C:\Users\mashi\Desktop\temp\Q175\csvs\iter4-2060000\pretrunc"
     CSV_DIRS = [
-        os.path.join(ABOVE_CSV_DIR, 'filt'), 
-        os.path.join(ABOVE_CSV_DIR, 'unfilt')
+        os.path.join(ABOVE_CSV_DIR, 'filt', 'HD_filt'),
+        os.path.join(ABOVE_CSV_DIR, 'filt', 'WT_filt'),
+        os.path.join(ABOVE_CSV_DIR, 'unfilt', 'HD_unfilt'),
+        os.path.join(ABOVE_CSV_DIR, 'unfilt', 'WT_unfilt'),
         ]
     OUTDIRS = [
-        os.path.join(ABOVE_CSV_DIR.replace('pretrunc', 'trunc'), 'filt'), 
-        os.path.join(ABOVE_CSV_DIR.replace('pretrunc', 'trunc'), 'unfilt')
+        os.path.join(ABOVE_CSV_DIR.replace('pretrunc', 'trunc'), 'filt', 'HD_filt'),
+        os.path.join(ABOVE_CSV_DIR.replace('pretrunc', 'trunc'), 'filt', 'WT_filt'),
+        os.path.join(ABOVE_CSV_DIR.replace('pretrunc', 'trunc'), 'unfilt', 'HD_unfilt'),
+        os.path.join(ABOVE_CSV_DIR.replace('pretrunc', 'trunc'), 'unfilt', 'WT_unfilt'),
     ]
 
-    TRUNCATION_CSV = "Q175_video_need_to_truncate.csv"
+    TRUNCATION_CSV = "YAC128_video_need_to_truncate.csv"
 
-    THRESHOLD = 0.8
+    THRESHOLD = 0.30
 
-    # df = store_which_csv_to_truncate_and_when(csv_folder=CSV_DIRS, 
-    #                                           save_dir=SAVE_DIR,
-    #                                           save_csv_name=TRUNCATION_CSV,
-    #                                           save_figure=False,
-    #                                           show_figure=False,
-    #                                           threshold=THRESHOLD)
+    skipcopy = False
+
+    if False:
+        df = store_which_csv_to_truncate_and_when(csv_folder=CSV_DIRS,
+                                                save_dir=SAVE_DIR,
+                                                save_csv_name=TRUNCATION_CSV,
+                                                save_figure=True,
+                                                show_figure=True,
+                                                threshold=THRESHOLD)
+        if len(df) == 0:
+            print("No truncation was needed! Skipping copying altogether.")
+            skipcopy = True
     
-    df = pd.read_csv(r"C:\Users\mashi\Desktop\temp\Q175\Q175_video_need_to_truncate.csv")
+    if True and not skipcopy:
+        df = pd.read_csv(os.path.join(SAVE_DIR, TRUNCATION_CSV))
 
-    for indir, outdir in zip(CSV_DIRS, OUTDIRS):
-        for file in os.listdir(indir):
-            csvfile = os.path.join(indir, file)
-            # we assume there's only one entry of the name mousename here
-            for row_idx in np.where(df['mousename'] == get_mousename(csvfile))[0]:
-                df_mousename = df['mousename'][row_idx]
-                
-                if df['need_to_truncate'][row_idx]:
-                    df_truncate_frame = int(df['truncate_start_frame'][row_idx].item())
-                    truncate_given_csv_at_specified_timepoint(csv_path=csvfile,
-                                                              truncate_frame=df_truncate_frame,
-                                                              outdir=outdir)
-                else:
-                    shutil.copyfile(csvfile, csvfile.replace('.csv', f'{TRUNCATED_SUFFIX_NO_EXT}.csv'))
+        for indir, outdir in zip(CSV_DIRS, OUTDIRS):
+            if not os.path.exists(outdir):
+                Path(outdir).mkdir(parents=True, exist_ok=True)
+
+            for file in os.listdir(indir):
+                csvfile = os.path.join(indir, file)
+                # we assume there's only one entry of the name mousename here
+                for row_idx in np.where(df['mousename'] == get_mousename(csvfile))[0]:
+                    df_mousename = df['mousename'][row_idx]
+                    
+                    if df['need_to_truncate'][row_idx]:
+                        df_truncate_frame = int(df['truncate_start_frame'][row_idx].item())
+                        truncate_given_csv_at_specified_timepoint(csv_path=csvfile,
+                                                                  truncate_frame=df_truncate_frame,
+                                                                  outdir=outdir)
+                    else:
+                        shutil.copyfile(csvfile, os.path.join(
+                            outdir,
+                            os.path.basename(csvfile).replace('.csv', f'{TRUNCATED_SUFFIX_NO_EXT}.csv')
+                            ))
+
+    
+    if True:
+        from visualization.visualize_mouse_trajectory import visualize_mouse_trajectory
+
+        ROOT = os.path.dirname(ABOVE_CSV_DIR)
+
+        MOUSE_TRAJECTORY_SAVE_DIR = os.path.join(SAVE_DIR, 'trajectory')
+        
+        for is_truncated, is_filtered, hd_or_wt in [
+            ('trunc', 'filt', 'HD_filt'),
+            ('trunc', 'filt', 'WT_filt'), 
+            ('trunc', 'unfilt', 'HD_unfilt'),
+            ('trunc', 'unfilt', 'WT_unfilt')
+            ]:
+
+            if skipcopy:
+                is_truncated = 'pretrunc'
+
+            readdir = os.path.join(ROOT, is_truncated, is_filtered, hd_or_wt)
+            savedir = os.path.join(MOUSE_TRAJECTORY_SAVE_DIR, is_filtered)
+
+            if not os.path.exists(savedir):
+                Path(savedir).mkdir(parents=True, exist_ok=True)
+            
+            for file in os.listdir(readdir):
+                csvfile = os.path.join(readdir, file)
+
+                figurename = f"{get_mousename(csvfile)}_{is_truncated}_{is_filtered}_mouseTraj.png"
+
+                visualize_mouse_trajectory(csvpath=csvfile, 
+                                    figureName=figurename, 
+                                    show_figure=False, 
+                                    save_figure=True, 
+                                    save_path=savedir)
