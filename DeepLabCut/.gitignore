@@ -1,2 +1,4 @@
 # ignore any form of 'data' files, since they are there for testing
 data
+# stores computed results
+COMPUTED
