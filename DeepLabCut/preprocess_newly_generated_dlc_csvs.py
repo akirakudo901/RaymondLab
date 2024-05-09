@@ -232,6 +232,14 @@ if __name__ == "__main__":
 
     skipcopy = False
 
+    if True:
+        for csv_dir in OUTDIRS:
+            for file in os.listdir(csv_dir):
+                csvfile = os.path.join(csv_dir, file)
+                num_blocks, endtime = check_csv_duration(csv_path=csvfile)
+                print(f"For file : {get_mousename(csvfile)}...")
+                print(f"Max block : {num_blocks}; endtime : {endtime}")
+
     if False:
         df = store_which_csv_to_truncate_and_when(csv_folder=CSV_DIRS,
                                                 save_dir=SAVE_DIR,
@@ -243,7 +251,7 @@ if __name__ == "__main__":
             print("No truncation was needed! Skipping copying altogether.")
             skipcopy = True
     
-    if True and not skipcopy:
+    if False and not skipcopy:
         df = pd.read_csv(os.path.join(SAVE_DIR, TRUNCATION_CSV))
 
         for indir, outdir in zip(CSV_DIRS, OUTDIRS):
@@ -268,7 +276,7 @@ if __name__ == "__main__":
                             ))
 
     
-    if True:
+    if False:
         from visualization.visualize_mouse_trajectory import visualize_mouse_trajectory
 
         ROOT = os.path.dirname(ABOVE_CSV_DIR)
