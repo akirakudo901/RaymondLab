@@ -29,6 +29,6 @@ visualize_mouse_gate(df=df,
                                 # 'rightforepaw', 'leftforepaw', 
                                 # 'snout', 'tailbase'
                                 ],
-                     length_limits=(101, None),
-                     plot_N_runs=5, 
+                     length_limits=(40, None),
+                    #  plot_N_runs=5,
                      locomotion_label=[29,30])

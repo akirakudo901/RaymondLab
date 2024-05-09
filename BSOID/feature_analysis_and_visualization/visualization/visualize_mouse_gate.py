@@ -1,6 +1,6 @@
 # Author: Akira Kudo
 # Created: 2024/03/31
-# Last updated: 2024/05/08
+# Last updated: 2024/05/09
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -36,6 +36,13 @@ def visualize_mouse_gate(df : pd.DataFrame,
     :param int plot_N_runs: The number of runs we plot. Defaults to all.
     """
     len_lowlim, len_highlim = process_upper_and_lower_limit(length_limits)
+
+    # identify which of locomotion_label exist in label
+    contained_loc_lbl = np.array(locomotion_label)[np.isin(locomotion_label, np.unique(label))]
+    # merge all instances of locomotion labels into one label (first in list of unique labels)
+    for loc_lbl in contained_loc_lbl:
+        if loc_lbl != contained_loc_lbl[0]:
+            label[label == loc_lbl] = contained_loc_lbl[0]
 
     # obtain all locomotion-labeled sequences from labels
     run_values, run_start, run_lengths = find_runs(label)
