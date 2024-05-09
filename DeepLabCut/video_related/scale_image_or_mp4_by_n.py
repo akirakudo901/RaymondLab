@@ -1,6 +1,6 @@
 # Author: Akira Kudo
 # Created: 2024/03/16
-# Last updated: 2024/04/20
+# Last updated: 2024/04/24
 
 import os
 
@@ -69,7 +69,7 @@ def _scale_something_by_n_using_ffmpy(obj_path : str,
         return
     
     output_comm = f'-vf "scale=iw*{n}:ih*{n}"' + \
-                  f' {"-c:a copy" if ext == "mp4" else ""}'
+                  f' {"-c:v libx264 -crf 0 -preset veryslow -c:a copy" if ext == "mp4" else ""}'
 
     ff = ffmpy.FFmpeg(
              inputs = {f'{obj_path}' : None},
