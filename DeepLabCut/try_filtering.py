@@ -1,13 +1,13 @@
 # Author: Akira Kudo
 # Created: 2024/04/10
-# Last Updated: 2024/04/12
+# Last Updated: 2024/05/09
 
 # A file that experiments around with filtering based on impossible speed
 
 import os
 
 from dlc_io.utils import read_dlc_csv_file
-from do_make_video_from_dlc_and_png import extract_frames_and_construct_video_from_csv, extract_frames_and_construct_video_from_dataframe
+from DeepLabCut.temper_with_csv_and_hdf.do_make_video_from_dlc_and_png import extract_frames_and_construct_video_from_csv, extract_frames_and_construct_video_from_dataframe
 from temper_with_csv_and_hdf.data_filtering.filter_based_on_boolean_array import filter_based_on_boolean_array
 from temper_with_csv_and_hdf.data_filtering.identify_paw_noise import identify_bodypart_noise_in_rest, identify_bodypart_noise_by_impossible_speed
 from utils_to_be_replaced_oneday import bodypart_abbreviation_dict, get_mousename
