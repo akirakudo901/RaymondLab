@@ -1,6 +1,6 @@
 # Author: Akira Kudo
 # Created: 2024/04/10
-# Last Updated: 2024/04/24
+# Last Updated: 2024/05/09
 
 # A file that experiments around with filtering based on impossible speed
 
@@ -120,7 +120,6 @@ extract_frames_and_construct_video_from_two_dataframes(
     dlc_df2=df,
     img_dir=IMG_DIR, output_dir=OUTPUT_DIR, 
     start=START, end=END, fps=FPS,
-    output_name=f"{mousename}_{START}to{END}_{FPS}fps_{'_'.join(abbreviations)}_filtered_speed{IMPOSSIBLE_SPEED_THRESHOLD}.mp4"
     )
 
 # extract_frames_and_construct_video_from_dataframe(

@@ -1,6 +1,6 @@
 # Author: Akira Kudo
 # Created: 2024/03/31
-# Last updated: 2024/04/02
+# Last updated: 2024/05/08
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -55,17 +55,21 @@ def visualize_mouse_gate(df : pd.DataFrame,
         
         # render the gate into a timeseries
         ax = axes[bpt_idx]
-
+        
         for i, run_start in enumerate(locomotion_idx):
             if i >= plot_N_runs: break
             run_end = run_start + locomotion_lengths[i] - 1
-            run = movement[run_start:run_end]
-            run_duration = f"{run_start}~{run_end}"
+            run = movement[run_start:run_end+1]
+            run_duration= f"{run_start}~{run_end}"
             # obtain where the paw movement starts and ends based on threshold
             # we align every bodypart to the first bpt's paw movement
             if bpt_idx == 0:
-                move_start, move_end, move_middle = find_paw_movements(run)
-                align_with[run_duration] = move_middle[0]
+                move_start, move_end, move_middle = find_paw_movements(
+                    run, threshold=MOVEMENT_THRESHOLD)
+                if len(move_middle) != 0:
+                    align_with[run_duration] = move_middle[0]
+                else:
+                    align_with[run_duration] = 0
             # we plot every run while shifting them so that 0 is the first paw movement
             ax.plot(range(-align_with[run_duration], len(run) - align_with[run_duration]), 
                     run, label=run_duration)
