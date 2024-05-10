@@ -1,6 +1,6 @@
 # Author: Akira Kudo
 # Created: 2024/04/02
-# Last Updated: 2024/04/15
+# Last Updated: 2024/05/10
 
 import numpy as np
 import pandas as pd
@@ -20,6 +20,8 @@ def read_BSOID_labeled_csv(csv_path : str,
     df = pd.read_csv(csv_path, header=header_rows, index_col=2)
     label = df.iloc[:, 1].to_numpy().astype(np.int64)
     dlc_data = df.iloc[:, 2:]
+    multiidx = pd.MultiIndex.from_tuples(dlc_data.columns, names=['bodyparts', 'coord'])
+    dlc_data.columns = multiidx
     return label, dlc_data
 
 if __name__ == "__main__":
