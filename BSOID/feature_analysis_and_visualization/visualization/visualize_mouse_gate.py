@@ -1,6 +1,6 @@
 # Author: Akira Kudo
 # Created: 2024/03/31
-# Last updated: 2024/05/09
+# Last updated: 2024/05/10
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -10,17 +10,17 @@ from feature_analysis_and_visualization.utils import find_runs
 from feature_analysis_and_visualization.utils import process_upper_and_lower_limit
 
 LOCOMOTION_LABELS = [38]
-MOVEMENT_THRESHOLD = 5
+MOVEMENT_THRESHOLD = 0.75
 
-def visualize_mouse_gate(df : pd.DataFrame, 
-                         label : np.ndarray, 
-                         bodyparts : list, 
-                         length_limits : tuple=(None, None),
-                         locomotion_label : list=LOCOMOTION_LABELS, 
-                         plot_N_runs : int=float("inf")):
+def visualize_mouse_gait_speed(df : pd.DataFrame,
+                                label : np.ndarray, 
+                                bodyparts : list, 
+                                length_limits : tuple=(None, None),
+                                locomotion_label : list=LOCOMOTION_LABELS, 
+                                plot_N_runs : int=float("inf")):
     """
-    Visualizes the mouse gate by taking in data & label, 
-    identifying sequences of gates in the data, and then
+    Visualizes speed of the mouse gait by taking in data & label,
+    identifying sequences of gait in the data, and then
     aligning all data to start from the beginning of first 
     paw movement.
 
@@ -35,23 +35,8 @@ def visualize_mouse_gate(df : pd.DataFrame,
     the locomotion group. Defaults to LOCOMOTION_LABELS.
     :param int plot_N_runs: The number of runs we plot. Defaults to all.
     """
-    len_lowlim, len_highlim = process_upper_and_lower_limit(length_limits)
-
-    # identify which of locomotion_label exist in label
-    contained_loc_lbl = np.array(locomotion_label)[np.isin(locomotion_label, np.unique(label))]
-    # merge all instances of locomotion labels into one label (first in list of unique labels)
-    for loc_lbl in contained_loc_lbl:
-        if loc_lbl != contained_loc_lbl[0]:
-            label[label == loc_lbl] = contained_loc_lbl[0]
-
-    # obtain all locomotion-labeled sequences from labels
-    run_values, run_start, run_lengths = find_runs(label)
-    locomotion_within_array = np.logical_and(
-        np.isin(run_values, locomotion_label), # is locomotion in label
-        np.logical_and(len_lowlim <= run_lengths, run_lengths <= len_highlim)
-        ) # is within allowed run range
-    locomotion_idx = run_start[locomotion_within_array]
-    locomotion_lengths = run_lengths[locomotion_within_array]
+    locomotion_idx, locomotion_lengths = find_locomotion_sequences(
+        label=label, locomotion_label=locomotion_label, length_limits=length_limits)
     
     _, axes = plt.subplots(len(bodyparts), 1)
     align_with = {}
@@ -88,6 +73,102 @@ def visualize_mouse_gate(df : pd.DataFrame,
         ax.legend()
     plt.suptitle("Locomotion Sequences Distance")
     plt.show()
+
+
+def visualize_mouse_paw_rests_in_locomomotion(
+        df : pd.DataFrame,
+        label : np.ndarray, 
+        bodyparts : list, 
+        length_limits : tuple=(None, None),
+        locomotion_label : list=LOCOMOTION_LABELS, 
+        plot_N_runs : int=float("inf")
+        ):
+    
+    locomotion_idx, locomotion_lengths = find_locomotion_sequences(
+        label=label, locomotion_label=locomotion_label, length_limits=length_limits)
+    plot_N_runs = min(plot_N_runs, len(locomotion_idx))
+
+    colorclass = plt.cm.ScalarMappable(cmap="rainbow")
+    C = colorclass.to_rgba(np.linspace(0, 1, len(bodyparts)))
+    colors = C[:, :3]
+    
+    # we will render as figure each sequence of movement into a 2D grid
+    for plot_idx in range(plot_N_runs):
+        _, ax = plt.subplots()
+
+        for bpt_idx, bpt in enumerate(bodyparts):
+            x, y = df[bpt, 'x'].to_numpy(), df[bpt, 'y'].to_numpy()
+            movement = np.sqrt(np.square(np.diff(x)) + np.square(np.diff(y)))
+            
+            run_start = locomotion_idx[plot_idx]
+            run_end = run_start + locomotion_lengths[plot_idx] - 1
+            run = movement[run_start:run_end+1]
+            run_x, run_y = x[run_start:run_end+1], y[run_start:run_end+1]
+
+            if 'paw' in bpt:
+                # obtain where the paw movement starts and ends based on threshold
+                move_start, move_end, _ = find_paw_movements(
+                    run, threshold=MOVEMENT_THRESHOLD)
+                paw_stationary_start = np.insert((move_end[:-1] - 1), 0, 0)
+                paw_stationary_end = move_start - 1
+                # we can then plot while the paw isn't moving
+                average_x, average_y = [], []
+                for pss, pse in zip(paw_stationary_start, paw_stationary_end):
+                    if pss == pse: continue\
+                    # first get the average for every stationary paw moments
+                    average_x.append(np.mean(run_x[pss:pse+1]).item())
+                    average_y.append(np.mean(run_y[pss:pse+1]).item())
+                
+                ax.scatter(average_x, average_y, marker='o',
+                           color=colors[bpt_idx], label=bpt)
+            else:
+                ax.plot(run_x, run_y, color=colors[bpt_idx], label=bpt)
+        ax.set_xlabel('X (pixel)')
+        ax.set_ylabel('Y (pixel)')
+        ax.set_xlim([0, 1100]); ax.set_ylim([0, 1100])
+        ax.legend()
+
+        plt.title(f"Locomotion Paw Stationary Moments {run_start}~{run_end}")
+        plt.show()
+
+
+# HELPER
+
+def find_locomotion_sequences(label : np.ndarray,
+                              locomotion_label : list=LOCOMOTION_LABELS,
+                              length_limits : tuple=(None, None)):
+    """
+    Find the set of locomotion sequences as continuous labels of any label 
+    in 'locomotion_label', found within label.
+    Returns those starting indices & lengths for such sequences, if they 
+    fall within the given limits in length.
+
+    :param np.ndarray label: Label used to extract sequences of locomotion.
+    :param list locomotion_label: Label signifying locomotion, defaults to LOCOMOTION_LABELS.
+    :param tuple length_limits: Lower & upper limit in frame for locomotion sequence we 
+    consider, defaults to any length.
+    :return np.ndarray locomotion_idx: Index of the start of locomotion sequences.
+    :return np.ndarray locomotion_lengths: Lengths of the locomotion sequences.
+    """
+    len_lowlim, len_highlim = process_upper_and_lower_limit(length_limits)
+
+    # identify which of locomotion_label exist in label
+    contained_loc_lbl = np.array(locomotion_label)[np.isin(locomotion_label, np.unique(label))]
+    # merge all instances of locomotion labels into one label (first in list of unique labels)
+    for loc_lbl in contained_loc_lbl:
+        if loc_lbl != contained_loc_lbl[0]:
+            label[label == loc_lbl] = contained_loc_lbl[0]
+
+    # obtain all locomotion-labeled sequences from labels
+    run_values, run_start, run_lengths = find_runs(label)
+    locomotion_within_array = np.logical_and(
+        np.isin(run_values, locomotion_label), # is locomotion in label
+        np.logical_and(len_lowlim <= run_lengths, run_lengths <= len_highlim)
+        ) # is within allowed run range
+    locomotion_idx = run_start[locomotion_within_array]
+    locomotion_lengths = run_lengths[locomotion_within_array]
+
+    return locomotion_idx, locomotion_lengths
 
 def find_paw_movements(movement : np.ndarray, threshold : float=MOVEMENT_THRESHOLD):
     """
