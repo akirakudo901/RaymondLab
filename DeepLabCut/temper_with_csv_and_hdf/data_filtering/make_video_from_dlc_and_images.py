@@ -1,6 +1,6 @@
 # Author: Akira Kudo
 # Created: 2024/04/08
-# Last Updated: 2024/04/23
+# Last Updated: 2024/05/10
 
 import os
 import re
@@ -23,7 +23,8 @@ def make_video_from_dlc_csv_and_images(
         dlc_path : str, img_dir : str,
         frame_start : int, frame_end : int,
         fps : int,
-        output_dir : str, output_name : str):
+        output_dir : str, output_name : str, 
+        trailpoints : int=0):
     """
     Creates a video from the given dlc & pngs found under given 
     directories, as well as the specified starting & ending frames.
@@ -38,19 +39,21 @@ def make_video_from_dlc_csv_and_images(
     :param int fps: The frame-per-second for the produced video.
     :param str output_dir: The path to the output directory.
     :param str output_name: The name of the outputted file.
+    :param int trailpoints: The number of trailpoints rendered on the video.
     """
     df = read_dlc_csv_file(dlc_path=dlc_path, include_scorer=False)
     make_video_from_dlc_dataframe_and_images(
         df=df, img_dir=img_dir, frame_start=frame_start, 
         frame_end=frame_end, fps=fps, output_dir=output_dir, 
-        output_name=output_name
+        output_name=output_name, trailpoints=trailpoints
         )
 
 def make_video_from_dlc_dataframe_and_images(
         df : pd.DataFrame, img_dir : str,
         frame_start : int, frame_end : int,
         fps : int,
-        output_dir : str, output_name : str
+        output_dir : str, output_name : str,
+        trailpoints : int=0
         ):
     """
     Creates a video from the given dataframe as extracted from a dlc csv, 
@@ -66,6 +69,7 @@ def make_video_from_dlc_dataframe_and_images(
     :param int fps: The frame-per-second for the produced video.
     :param str output_dir: The path to the output directory.
     :param str output_name: The name of the outputted file.
+    :param int trailpoints: The number of trailpoints rendered on the video.
     """
     df_x, df_y, _ = df.values.reshape((len(df), -1, 3)).T
     
@@ -90,7 +94,7 @@ def make_video_from_dlc_dataframe_and_images(
                                                           y_filtered=df_y,
                                                           dotsize=DOTSIZE,
                                                           bpts2color=bpts2color,
-                                                          trailpoints=NUM_TRAILPOINTS)
+                                                          trailpoints=trailpoints)
             video.write(labeled_img)
         cv2.destroyAllWindows()
         video.release()
@@ -101,7 +105,8 @@ def make_video_from_dlc_dataframe_and_images(
 def make_video_from_two_dlc_dataframes_and_images(
         df1 : pd.DataFrame, df2 : pd.DataFrame, 
         img_dir : str, frame_start : int, frame_end : int,
-        fps : int, output_dir : str, output_name : str
+        fps : int, output_dir : str, output_name : str,
+        trailpoints : int=0
         ):
     """
     Creates a video from the given two dataframes as extracted from dlc csvs, 
@@ -120,6 +125,7 @@ def make_video_from_two_dlc_dataframes_and_images(
     :param int fps: The frame-per-second for the produced video.
     :param str output_dir: The path to the output directory.
     :param str output_name: The name of the outputted file.
+    :param int trailpoints: The number of trailpoints rendered on the video.
     """
     df1_x, df1_y, _ = df1.values.reshape((len(df1), -1, 3)).T
     df2_x, df2_y, _ = df2.values.reshape((len(df2), -1, 3)).T
@@ -141,7 +147,7 @@ def make_video_from_two_dlc_dataframes_and_images(
             read_img = cv2.imread(os.path.join(img_dir, imgfile))
             labeled_img = label_two_predictions_of_bodyparts_on_single_frame(
                 read_img, index=img_idx, x=df1_x, y=df1_y, x2=df2_x, y2=df2_y,
-                marksize=DOTSIZE, bpts2color=bpts2color, trailpoints=NUM_TRAILPOINTS)
+                marksize=DOTSIZE, bpts2color=bpts2color, trailpoints=trailpoints)
             video.write(labeled_img)
         cv2.destroyAllWindows()
         video.release()

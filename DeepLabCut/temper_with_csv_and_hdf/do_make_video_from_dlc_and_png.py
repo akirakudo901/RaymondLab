@@ -1,6 +1,6 @@
 # Author: Akira Kudo
 # Created: 2024/04/08
-# Last Updated: 2024/04/22
+# Last Updated: 2024/05/10
 
 import os
 
@@ -20,7 +20,8 @@ def extract_frames_and_construct_video_from_csv(
         end : int,
         fps : int,
         img_name : str=None,
-        output_name : str=None
+        output_name : str=None,
+        trailpoints : int=0
         ):
     """
     Given relevant paths, extracts frames in the specified
@@ -39,6 +40,7 @@ def extract_frames_and_construct_video_from_csv(
     specified; defaults to "{MOUSENAME}_{FRAME_NUMBER}.jpg" if None.
     :param str output_name: Name of the generated video, defaults if None
     to: "{MOUSENAME}_{start}to{end}_{fps}fps.mp4"
+    :param int trailpoints: The number of trailpoints rendered on the video.
     """
     # first get the mouse names, ensuring they match
     video_mousename, csv_mousename = get_mousename(video_path), get_mousename(csv_path)
@@ -49,7 +51,8 @@ def extract_frames_and_construct_video_from_csv(
     extract_frames_and_construct_video_from_dataframe(
         video_path=video_path, dlc_df=df, img_dir=img_dir, 
         output_dir=output_dir, start=start, end=end, fps=fps,
-        img_name=img_name, output_name=output_name
+        img_name=img_name, output_name=output_name,
+        trailpoints=trailpoints
     )
     
 def extract_frames_and_construct_video_from_dataframe(
@@ -61,7 +64,8 @@ def extract_frames_and_construct_video_from_dataframe(
         end : int,
         fps : int,
         img_name : str=None,
-        output_name : str=None
+        output_name : str=None,
+        trailpoints : int=0
         ):
     """
     Given relevant paths, extracts frames in the specified
@@ -80,6 +84,7 @@ def extract_frames_and_construct_video_from_dataframe(
     specified; defaults to "{MOUSENAME}_{FRAME_NUMBER}.jpg" if None.
     :param str output_name: Name of the generated video, defaults if None
     to: "{MOUSENAME}_{start}to{end}_{fps}fps.mp4"
+    :param int trailpoints: The number of trailpoints rendered on the video.
     """
     # first get the mouse name
     mousename = get_mousename(video_path)
@@ -97,7 +102,8 @@ def extract_frames_and_construct_video_from_dataframe(
         make_video_from_dlc_dataframe_and_images(
             df=dlc_df, img_dir=img_dir, 
             frame_start=start, frame_end=end,
-            fps=fps, output_dir=output_dir, output_name=output_name
+            fps=fps, output_dir=output_dir, output_name=output_name,
+            trailpoints=trailpoints
             )
     except Exception as e:
         # not the most robust, so please don't run this code in crazy ways
@@ -112,7 +118,8 @@ def extract_frames_and_construct_video_from_dataframe(
             make_video_from_dlc_dataframe_and_images(
                 df=dlc_df, img_dir=img_dir, 
                 frame_start=start, frame_end=end,
-                fps=fps, output_dir=output_dir, output_name=output_name
+                fps=fps, output_dir=output_dir, output_name=output_name,
+                trailpoints=trailpoints
                 )
     print("Done!")
 
@@ -126,7 +133,8 @@ def extract_frames_and_construct_video_from_two_csvs(
         end : int,
         fps : int,
         img_name : str=None,
-        output_name : str=None
+        output_name : str=None,
+        trailpoints : int=0
         ):
     """
     Given relevant paths, extracts frames in the specified
@@ -146,6 +154,7 @@ def extract_frames_and_construct_video_from_two_csvs(
     specified; defaults to "{MOUSENAME}_{FRAME_NUMBER}.jpg" if None.
     :param str output_name: Name of the generated video, defaults if None
     to: "{MOUSENAME}_{start}to{end}_{fps}fps.mp4"
+    :param int trailpoints: The number of trailpoints rendered on the video.
     """
     # first get the mouse names, ensuring they match
     video_mousename = get_mousename(video_path)
@@ -161,7 +170,8 @@ def extract_frames_and_construct_video_from_two_csvs(
     extract_frames_and_construct_video_from_two_dataframes(
         video_path=video_path, dlc_df1=df1, dlc_df2=df2, img_dir=img_dir, 
         output_dir=output_dir, start=start, end=end, fps=fps,
-        img_name=img_name, output_name=output_name
+        img_name=img_name, output_name=output_name,
+        trailpoints=trailpoints
     )
     
 def extract_frames_and_construct_video_from_two_dataframes(
@@ -174,7 +184,8 @@ def extract_frames_and_construct_video_from_two_dataframes(
         end : int,
         fps : int,
         img_name : str=None,
-        output_name : str=None
+        output_name : str=None,
+        trailpoints : int=0
         ):
     """
     Given relevant paths, extracts frames in the specified
@@ -194,6 +205,7 @@ def extract_frames_and_construct_video_from_two_dataframes(
     specified; defaults to "{MOUSENAME}_{FRAME_NUMBER}.jpg" if None.
     :param str output_name: Name of the generated video, defaults if None
     to: "{MOUSENAME}_{start}to{end}_{fps}fps.mp4"
+    :param int trailpoints: The number of trailpoints rendered on the video.
     """
     # first get the mouse name
     mousename = get_mousename(video_path)
@@ -211,7 +223,8 @@ def extract_frames_and_construct_video_from_two_dataframes(
         make_video_from_two_dlc_dataframes_and_images(
             df1=dlc_df1, df2=dlc_df2, img_dir=img_dir, 
             frame_start=start, frame_end=end,
-            fps=fps, output_dir=output_dir, output_name=output_name
+            fps=fps, output_dir=output_dir, output_name=output_name,
+            trailpoints=trailpoints
         )
     except Exception as e:
         # not the most robust, so please don't run this code in crazy ways
@@ -226,7 +239,8 @@ def extract_frames_and_construct_video_from_two_dataframes(
             make_video_from_two_dlc_dataframes_and_images(
                 df1=dlc_df1, df2=dlc_df2, img_dir=img_dir, 
                 frame_start=start, frame_end=end,
-                fps=fps, output_dir=output_dir, output_name=output_name
+                fps=fps, output_dir=output_dir, output_name=output_name,
+                trailpoints=trailpoints
             )
     print("Done!")
 
