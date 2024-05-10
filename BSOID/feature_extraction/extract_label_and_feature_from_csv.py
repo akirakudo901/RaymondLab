@@ -1,6 +1,6 @@
 # Author: Akira Kudo (Copying A TON from the B-SOiD project)
 # Created: 2024/03/19
-# Last updated: 2024/04/17
+# Last updated: 2024/05/10
 
 # These code files were copied on 2024/03/19 from 
 # Visualize_Feature_Distributions_Per_B_SOID_Bout_Cluster.ipynb and the code blocks
@@ -54,6 +54,15 @@ def extract_label_and_feature_from_csv(filepath : str, pose : List[int],
     :param str load_path: The path from which we attempt to load precomputed
     features. Defaults to FEATURE_SAVING_FOLDERS.
     """
+    # first check relevant paths exist
+    if not os.path.exists(filepath): 
+        raise Exception(f"Following file doesn't seem to exist: {filepath}...")
+    if not os.path.exists(clf_path): 
+        raise Exception(f"Couldn't find classifier: {filepath}...")
+    if save_result and not os.path.exists(save_path): 
+            raise Exception(f"Saving folder wasn't found: {save_path}...")
+    if not recompute and not os.path.exists(load_path): 
+            raise Exception(f"Folder holding data to potentially load wasn't found: {load_path}...")
 
     filename = os.path.basename(filepath).replace('.csv', '')
     clfname = os.path.basename(clf_path).replace('_randomforest.sav', '')
