@@ -39,6 +39,26 @@ def make_locomotion_paper_ink_video_from_dataframe_and_label(
         locomotion_labels : list=LOCOMOTION_LABEL, 
         fps : int=FPS
         ):
+    """
+    Create locomotion video in the paper-ink paradigm manner, 
+    using the given dataframe and label.
+
+    :param str video_path: Path to video.
+    :param pd.DataFrame df: DataFrame holding DLC data.
+    :param np.ndarray label: BSOID label for the DLC data. 
+    :param str img_dir: Directory holding frames extracted from video.
+    :param str output_dir: Directory where we output the generated video.
+    :param bool show_nonpaw: Whether to show non-paw body parts, 
+    defaults to False
+    :param tuple length_limits: Lower & upper limits in length for locomotion
+    snippets to use to generate videos, defaults to (None, None)
+    :param int num_runs: Number of locomotion runs to render as video, defaults to 5
+    :param float threshold: Threshold separating locomotion movement from 
+    paw rest, defaults to MOVEMENT_THRESHOLD
+    :param list locomotion_labels: Integer labels corresponding to locomotion groups, 
+    defaults to LOCOMOTION_LABEL (38, for YAC128 network).
+    :param int fps: Frame-per-second for generated video, defaults to FPS
+    """
     
     if len(locomotion_labels) < 1: 
         raise Exception("At least 1 locomotion label integer must be specified...")
