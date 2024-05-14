@@ -2,3 +2,6 @@
 data
 # stores computed results
 COMPUTED
+
+# item_for_testing under training
+training/item_for_testing
