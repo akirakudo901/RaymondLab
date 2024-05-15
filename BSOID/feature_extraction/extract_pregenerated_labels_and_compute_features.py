@@ -1,18 +1,20 @@
 # Author: Akira Kudo
 # Created: 2024/04/17
-# Last Updated: 2024/04/17
+# Last Updated: 2024/05/15
 
 import os
 
 import joblib
 import numpy as np
 
-from .extract_label_and_feature_from_csv import compute_merged_features_from_csv_data, fetch_precomputed_from_npy, FEATURE_SAVING_FOLDERS, FEATURE_FILE_SUFFIX, LABEL_FILE_SUFFIX
+from .extract_label_and_feature_from_csv import compute_merged_features_from_csv_data, create_labeled_feature_csv_from_label_and_feature_array, fetch_precomputed_from_npy, FEATURE_SAVING_FOLDERS, FEATURE_FILE_SUFFIX, LABELED_FEATURE_CSV_SUFFIX, LABELED_FEATURE_FOLDERNAME, LABEL_FILE_SUFFIX
 
-def extract_pregenerated_labels_and_compute_features(predictionsPath, filename,
-                              clf_sav_path : str, fps=40,
-                              save_result=True, save_path=FEATURE_SAVING_FOLDERS,
-                              recompute=False,  load_path=FEATURE_SAVING_FOLDERS):
+def extract_pregenerated_labels_and_compute_features(
+        predictionsPath, filename,
+        clf_sav_path : str, pose : list, fps=40,
+        save_result=True, save_path=FEATURE_SAVING_FOLDERS,
+        recompute=False,  load_path=FEATURE_SAVING_FOLDERS
+        ):
     """
     Given a specific csv name that was analyzed, extracts a numpy.ndarray of
     frame-shifted labels stored within a 'predictions.sav' file at time of
@@ -22,6 +24,10 @@ def extract_pregenerated_labels_and_compute_features(predictionsPath, filename,
     labels of interest.
     :param str clf_sav_path: The path to the classifier-stored sav file, often
     called 'PREFIX_randomforest.sav'. Used to name storing files consistently.
+    :param List[int] pose: A list of indices that specifies which body part is
+    inscribed into the labeled feature csv as columns, in which order. Provide
+    your best guess!
+    e.g. [0,1,2,6,7,8] will likely use 'snout' and 'leftforepaw'.
     :param int fps: Framerate for video. Defaults to 40, given Ellen's project.
     :param bool save_result: Whether to save the computed features under
     save_path. Defaults to true.
@@ -73,5 +79,12 @@ def extract_pregenerated_labels_and_compute_features(predictionsPath, filename,
             print(f"Saving results to: {save_path}")
             np.save(os.path.join(save_path, feature_save_filename), feature)
             np.save(os.path.join(save_path,   label_save_filename),   label)
+
+            # also save the labeled features
+            lbld_feats_filename   = clfname + "_" + filename + LABELED_FEATURE_CSV_SUFFIX
+            create_labeled_feature_csv_from_label_and_feature_array(
+                label=label, feature=feature, save_path=save_path, 
+                pose=pose, lbld_feats_filename=lbld_feats_filename
+            )
 
     return label, feature
