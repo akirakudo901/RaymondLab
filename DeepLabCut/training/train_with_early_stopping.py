@@ -1,6 +1,6 @@
 # Author: Akira Kudo
 # Created: 2024/05/09
-# Last Updated: 2024/05/12
+# Last Updated: 2024/05/14
 
 import os
 
@@ -8,6 +8,10 @@ import deeplabcut
 import numpy as np
 import pandas as pd
 import yaml
+
+import tensorflow
+
+from edit_dlc_config import edit_config
 
 TRAINING_ITERATIONS = "Training iterations:"
 SHUFFLE_NUMBER = "Shuffle number"
@@ -29,11 +33,10 @@ def train_with_early_stopping(
         keepdeconvweights=True, 
         modelprefix=''
         ):
-    
-    error_col = "Test error with p-cutoff" if use_filtered_error else "Test error(px)"
+    error_col = "Test error with p-cutoff" if use_filtered_error else " Test error(px)"
 
     # access pose_cfg.yaml
-    pose_cfg_dict, _ = fetch_pose_cfg_given_config(config_path=config, shuffle=shuffle)    
+    pose_cfg_dict, pose_cfg_path = fetch_pose_cfg_given_config(config_path=config, shuffle=shuffle)    
     # if saveiters is given as None, load it (we need it for early stopping)
     if saveiters is None: saveiters = pose_cfg_dict['save_iters']
     # we also need the starting iteration number from pose_cfg
@@ -60,23 +63,30 @@ def train_with_early_stopping(
             Shuffles=[shuffle], trainingsetindex=trainingsetindex,
             plotting=False, show_errors=True, comparisonbodyparts='all',
             gputouse=gputouse, rescale=False, modelprefix='')
-
-        # we observe the latest snapshot evaluation losses, and if we find consecutive
-        # losses in accuracy that happen earlystop_obs_num in a row, we stop
-        csv_df, _ = fetch_evaluation_csv_given_config(config_path=config)
-        df_curr_training = csv_df[csv_df[SHUFFLE_NUMBER] == shuffle]
         
-        losses = df_curr_training[
-            (df_curr_training[TRAINING_ITERATIONS] <= end_iter) & 
-            (df_curr_training[TRAINING_ITERATIONS] >= end_iter - earlystop_obs_num * saveiters)
-        ]
-        losses = losses.sort_values(by=[TRAINING_ITERATIONS], ascending=True)
-
-        change_in_error = np.diff(losses[error_col])
-        # if all changes in error between consecutive saveiters are increasing, stop
-        if np.all(change_in_error > 0):
-            print(f"We've seen {earlystop_obs_num} consecutive increase in error - stopping early!")
-            break
+        # adjust pose_cfg.yaml so that the next training loop starts with the latest snapshot
+        latest_snapshot_path = os.path.join(os.path.dirname(pose_cfg_path),
+                                            f"snapshot-{end_iter}")
+        edit_config(config_path=pose_cfg_path, init_weights=latest_snapshot_path)
+        
+        if (end_iter - start_iter) // saveiters >= earlystop_obs_num:
+            
+            # we observe the latest snapshot evaluation losses, and if we find consecutive
+            # losses in accuracy that happen earlystop_obs_num in a row, we stop
+            csv_df, _ = fetch_evaluation_csv_given_config(config_path=config)
+            df_curr_training = csv_df[csv_df[SHUFFLE_NUMBER] == shuffle]
+            
+            losses = df_curr_training[
+                (df_curr_training[TRAINING_ITERATIONS] <= end_iter) & 
+                (df_curr_training[TRAINING_ITERATIONS] >= end_iter - earlystop_obs_num * saveiters)
+            ]
+            losses = losses.sort_values(by=[TRAINING_ITERATIONS], ascending=True)
+    
+            change_in_error = np.diff(losses[error_col])
+            # if all changes in error between consecutive saveiters are increasing, stop
+            if np.all(change_in_error > 0):
+                print(f"We've seen {earlystop_obs_num} consecutive increase in error - stopping early!")
+                break
 
         end_iter += saveiters
     
@@ -165,46 +175,42 @@ if __name__ == "__main__":
     # print("Evaluation csv path: ")
     # print(csv_path)
 
-    CONFIG = r"/media/Data/Raymond Lab/Q175-D2Cre Open Field Males/Q175-D2Cre Open Field Males Brown-Judy-2024-01-12/config.yaml"
-    EARLYSTOP_NUM = 3
+    CONFIG = r"/media/Data/Raymond Lab/Q175_Black_Openfield/Q175_Black_Openfield-Akira-2024-05-08" + \
+              "/config.yaml"
+    EARLYSTOP_NUM, SHUFFLE = 7, 1
+    
+    DISPLAY_ITERS = 1000
+    SAVEITERS = 10
+    MAXITERS = 30#2000000
+    USE_FILTERED_ERROR = False
 
+    import sys
+    sys.path.append(r"/media/Data/Raymond Lab/Python_Scripts")
+    
     from send_slack_message import send_slack_message
 
-    start_message = f"Starting to train network with EARLYSTOP_NUM of {EARLYSTOP_NUM} and config found at: {CONFIG}."
+    start_message = f"Starting a network training with,\n" + \
+                    f"- Early-stop observation: {EARLYSTOP_NUM}\n" + \
+                    f"- Displaying progress every: {DISPLAY_ITERS} iterations\n" + \
+                    f"- Saving every: {SAVEITERS} iterations\n" + \
+                    f"- Maximum iteration up to: {MAXITERS} iterations\n" + \
+                    f"Config found at: \n{CONFIG}."
     send_slack_message(message=start_message)
 
     try:
         train_with_early_stopping(
             config=CONFIG, # DLC original parameter
             earlystop_obs_num=EARLYSTOP_NUM,
-            use_filtered_error=False,
+            use_filtered_error=USE_FILTERED_ERROR,
             # DLC original parameters
-            shuffle=1,
+            shuffle=SHUFFLE,
             max_snapshots_to_keep=None, 
-            displayiters=1000, 
-            saveiters=50000, 
-            maxiters=3030000)
+            displayiters=DISPLAY_ITERS, 
+            saveiters=SAVEITERS, 
+            maxiters=MAXITERS)
         
         success_message = "Training successfully completed!"
         send_slack_message(message=success_message)
     except Exception as e:
-        print(e)
         send_slack_message(message="Training halted given unexpected error!")
-
-    PLOT_SCORE_MAPS = False
-    SHUFFLES = [1]
-    COMPARISON_BODYPARTS = "all"
-    
-    send_slack_message(message="Starting evaluation!")
-    
-    try:
-        deeplabcut.evaluate_network(CONFIG,
-                                     Shuffles=SHUFFLES,
-                                     plotting=PLOT_SCORE_MAPS,
-                                     show_errors=True,
-                                     comparisonbodyparts=COMPARISON_BODYPARTS
-                                     )
-        send_slack_message(message="Evaluation successfully completed!")
-    except Exception as e:
-        print(e)
-        send_slack_message(message="Evaluation halted given unexpected error!")
+        raise e
