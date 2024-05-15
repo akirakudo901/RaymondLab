@@ -216,7 +216,8 @@ def do_feature_visualization(csvfile: str,
                             show_figure: bool, 
                             save_figure: bool,
                             logscale: bool, 
-                            brute_thresholding: bool):
+                            brute_thresholding: bool, 
+                            brute_threshold : float=0.8):
     """
     Plots features as analyzed and output by B-SOID.
     1) Takes in an already analyzed csv path together with its
@@ -240,6 +241,7 @@ def do_feature_visualization(csvfile: str,
     :param bool save_figure: Whether to save generated figures.
     :param bool logscale: Whether to use log scale in plots.
     :param bool brute_thresholding: Whether to use brute thresholding in plots.
+    :param float brute_threshold: Threshold for brute thresholding, defaults to 0.8.
     """
 
     # create non-existent folders if needed
@@ -250,12 +252,12 @@ def do_feature_visualization(csvfile: str,
 
     labels, features = do_feature_extraction(
         csv_path=csvfullpath,
-        predictions_path=PREDICTIONS_PATH,
-        clf_sav_path=CLF_SAV_PATH,
-        computed_feature_saving_path=COMPUTED_FEATURE_SAVING_PATH,
+        predictions_path=predictions_path,
+        clf_sav_path=clf_sav_path,
+        computed_feature_saving_path=computed_feature_saving_path,
         fps=FPS,
-        brute_thresholding=BRUTE_THRESHOLDING, 
-        threshold=BRUTE_THRESHOLDING_THRESH,
+        brute_thresholding=brute_thresholding, 
+        threshold=brute_threshold,
         recompute=False,
         save_result=True,
         pose=POSE
