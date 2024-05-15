@@ -1,9 +1,11 @@
 # Author: Akira Kudo
 # Created: 2024/03/27
-# Last updated: 2024/04/17
+# Last updated: 2024/05/15
 
 import os
 from pathlib import Path
+
+from do_feature_extraction import do_feature_extraction
 
 from feature_analysis_and_visualization.visualization.plot_bout_length import plot_bout_length
 from feature_analysis_and_visualization.visualization.plot_mouse_trajectory import plot_mouse_trajectory
@@ -26,7 +28,7 @@ YOUR_ROOT
 """
 
 ########################
-YOUR_ROOT = r"Z:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\RaymondLab\BSOID\COMPUTED"
+YOUR_ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "COMPUTED")
 ########################
 
 # ACTUAL CREATION
@@ -74,9 +76,8 @@ displacement_bodyparts = [
 # PATHS
 ###################
 # the path to the network folders generated
-NETWORK_NAME = 'Apr-08-2024' #'Feb-23-2023' #'Feb-26-2024'
-NETWORK_SUBFOLDER = f'Akira_{NETWORK_NAME.replace("-", "")}'
-# f"Leland_{NETWORK_NAME.replace('-', '')}"
+NETWORK_NAME = 'Feb-23-2023' #'Apr-08-2024'  #'Feb-26-2024'
+NETWORK_SUBFOLDER =  f"Leland_{NETWORK_NAME.replace('-', '')}"
 # f"Akira_{NETWORK_NAME.replace('-', '')}"
 
 # the predictions file holds a precomputed set of labels for the FILE_OF_INTEREST file
@@ -86,8 +87,11 @@ PREDICTIONS_FILENAME = os.path.join("sav", NETWORK_SUBFOLDER,
 # if B-SOID has already ran on it, you might want to use a 'predictions.sav'
 # file to extract labels from to speed up the process
 CSVFILE_OF_INTEREST = [
-    "20220228223808_320151_m1_openfieldDLC_resnet50_Q175-D2Cre Open Field Males BrownJan12shuffle1_1030000_filtered.csv"
+    "312152_m2DLC_resnet50_WhiteMice_OpenfieldJan19shuffle1_1030000.csv"
+    
 ]
+
+#"20220228223808_320151_m1_openfieldDLC_resnet50_Q175-D2Cre Open Field Males BrownJan12shuffle1_1030000_filtered.csv"
 # FROM AKIRA APR08-2024 NETWORK
 
 #     "20211018011357_242m12DLC_resnet50_Q175-D2Cre Open Field Males BrownJan12shuffle1_500000.csv",
@@ -130,8 +134,12 @@ LOGSCALE = True
 # whether to use adaptive or brute thresholding for filtering values
 # when runnign the adp_filt function - check its definition for more
 BRUTE_THRESHOLDING = False
+# the brute threshold to use if BRUTE_THRESHOLDING is True
+BRUTE_THRESHOLDING_THRESH = 0.8
 # This is the list of labels to show
-GROUPS_TO_SHOW = [0,1,5,9,10,12,14,15,17,22,24,28,29,30]
+GROUPS_TO_SHOW = [32,38]
+# fps of input videos
+FPS = 40
 
 
 # MAIN FUNCTION
@@ -148,13 +156,18 @@ def main(csvfile : str):
     """
     csvfullpath = os.path.join(CSVFOLDER_PATH, csvfile)
 
-    labels, features = None, None
-    print("Computing both labels and features from csv!")
-    labels, features = extract_label_and_feature_from_csv(
-        filepath=csvfullpath, pose=POSE, clf_path=CLF_SAV_PATH, fps=40,
-        save_result=True, save_path=COMPUTED_FEATURE_SAVING_PATH,
-        recompute=False,  load_path=COMPUTED_FEATURE_SAVING_PATH)
-    print("End.")
+    labels, features = do_feature_extraction(
+        csv_path=csvfullpath,
+        predictions_path=PREDICTIONS_PATH,
+        clf_sav_path=CLF_SAV_PATH,
+        computed_feature_saving_path=COMPUTED_FEATURE_SAVING_PATH,
+        fps=FPS,
+        brute_thresholding=BRUTE_THRESHOLDING, 
+        threshold=BRUTE_THRESHOLDING_THRESH,
+        recompute=False,
+        save_result=True,
+        pose=POSE
+        )
 
     # generate map of features to guessed index
     featname_to_idx_map = generate_guessed_map_of_feature_to_data_index(
@@ -235,27 +248,19 @@ def do_feature_visualization(csvfile: str,
     
     csvfullpath = os.path.join(csvfolder_path, csvfile)
 
-    labels, features = None, None
-    # TODO FIX
-    if predictions_path is not None:
-        print("Extracting pregenerated labels and computing features!")
-        labels, features = extract_pregenerated_labels_and_compute_features(
-            predictions_path, csvfile, clf_sav_path=clf_sav_path, fps=40,
-            save_result=True, save_path=computed_feature_saving_path,
-            recompute=False,  load_path=computed_feature_saving_path
-            )
-        print("End.")
-    # TODO FIX END
-
-    if labels is None or features is None:
-        print("Extraction of pregenerated labels somehow failed...")
-        print("Computing both labels and features from csv!")
-        labels, features = extract_label_and_feature_from_csv(
-            filepath=csvfullpath, pose=POSE, clf_path=clf_sav_path, fps=40,
-            save_result=True, save_path=computed_feature_saving_path,
-            recompute=False, load_path=computed_feature_saving_path)
-        print("End.")
-
+    labels, features = do_feature_extraction(
+        csv_path=csvfullpath,
+        predictions_path=PREDICTIONS_PATH,
+        clf_sav_path=CLF_SAV_PATH,
+        computed_feature_saving_path=COMPUTED_FEATURE_SAVING_PATH,
+        fps=FPS,
+        brute_thresholding=BRUTE_THRESHOLDING, 
+        threshold=BRUTE_THRESHOLDING_THRESH,
+        recompute=False,
+        save_result=True,
+        pose=POSE
+        )
+    
     # generate map of features to guessed index
     featname_to_idx_map = generate_guessed_map_of_feature_to_data_index(
         bodyparts
