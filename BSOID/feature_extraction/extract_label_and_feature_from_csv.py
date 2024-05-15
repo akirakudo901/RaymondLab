@@ -71,7 +71,6 @@ def extract_label_and_feature_from_csv(filepath : str, pose : List[int],
     clfname = os.path.basename(clf_path).replace('_randomforest.sav', '')
     feature_save_filename = clfname + "_" + filename + FEATURE_FILE_SUFFIX
     label_save_filename   = clfname + "_" + filename + LABEL_FILE_SUFFIX
-    lbld_feats_filename   = clfname + "_" + filename + LABELED_FEATURE_CSV_SUFFIX
 
     if not recompute:
         # attempt fetch
@@ -115,12 +114,7 @@ def extract_label_and_feature_from_csv(filepath : str, pose : List[int],
 
     if save_result:
         print(f"Saving results to: {save_path}")
-        try:
-            # first create the folder to hold labeled features
-            lbld_feats_save_folder = os.path.join(save_path, LABELED_FEATURE_FOLDERNAME)
-            if not os.path.exists(lbld_feats_save_folder):
-                os.mkdir(lbld_feats_save_folder)
-                
+        try:    
             # save the features
             feature_save_path = os.path.join(save_path, feature_save_filename)
             if os.path.exists(feature_save_path):
@@ -134,28 +128,11 @@ def extract_label_and_feature_from_csv(filepath : str, pose : List[int],
             np.save(label_save_path, label)
 
             # then save the labeled feature
-            lbld_feats_save_path = os.path.join(lbld_feats_save_folder, lbld_feats_filename)
-            if os.path.exists(lbld_feats_save_path):
-                print(f"Overwriting labeled feature: - {lbld_feats_filename}")
-            # specify which bodypart we consider - predicted from pose
-            bodyparts = [Bodypart(pose_val // 3) 
-                         for pose_val in pose 
-                         if Bodypart(pose_val // 3) not in bodyparts]
-            
-            feature_to_index_map = generate_guessed_map_of_feature_to_data_index(
-                bodyparts, short=True
+            lbld_feats_filename   = clfname + "_" + filename + LABELED_FEATURE_CSV_SUFFIX
+            create_labeled_feature_csv_from_label_and_feature_array(
+                label=label, feature=feature, save_path=save_path, 
+                pose=pose, lbld_feats_filename=lbld_feats_filename
             )
-            # then create column names from those info
-            column_header = ["label"] + ["_tofill_"] * len(feature_to_index_map)
-            for feature_name, feature_idx in feature_to_index_map.items():
-                column_header[feature_idx + 1] = feature_name
-            # finally populate a dataframe with the given data
-            label = label[:feature.shape[1]] # truncate labels by the number of features
-            # len(labels) > len(features) as artifact of padding - have to double check
-            df_data = np.concatenate((np.expand_dims(label, axis=0), feature), 
-                                    axis=0).T
-            saved_df = pd.DataFrame(data=df_data, columns=column_header)
-            saved_df.to_csv(lbld_feats_save_path)
 
         except Exception as e:
             print(e)
@@ -205,3 +182,55 @@ def compute_merged_features_from_csv_data(data : np.ndarray, fps : int):
     for i, feat in enumerate(premerged_feature):
         feature[:, i::stride] = feat
     return feature, premerged_feature
+
+def create_labeled_feature_csv_from_label_and_feature_array(
+        label : np.ndarray,
+        feature : np.ndarray,
+        save_path : str,
+        pose : list,
+        lbld_feats_filename : str
+        ):
+    """
+    Takes in a label and feature extracted in B-SOID manner, 
+    creating a csv holding both info and storing it under:
+    * save_path -> LABELED_FEATURE_FOLDERNAME (lbl_feats)
+    With given pose and lbld_feats_filename.
+
+    :param np.ndarray label: Label of B-SOID - must be the same length
+    as feature.shape[0].
+    :param np.ndarray feature: Features of B-SOID - feature.shape[0] must
+    equal label.shape[0].
+    :param str save_path: Path to which we save results, a subfolder being
+    created under it (LABLED_FEATURE_FOLDERNAME, or lbl_feats).
+    :param List[int] pose: A list of indices relative to the csv that specifies
+    which body part to use for computation. e.g. [0,1,2,6,7,8] will use those
+    columns with those indices for computation.
+    :param str lbld_feats_filename: Name of the saved csv.
+    """
+    # first create the folder to hold labeled features
+    lbld_feats_save_folder = os.path.join(save_path, LABELED_FEATURE_FOLDERNAME)
+    if not os.path.exists(lbld_feats_save_folder):
+        os.mkdir(lbld_feats_save_folder)
+        
+    lbld_feats_save_path = os.path.join(lbld_feats_save_folder, lbld_feats_filename)
+    if os.path.exists(lbld_feats_save_path):
+        print(f"Overwriting labeled feature: - {lbld_feats_filename}")
+    # specify which bodypart we consider - predicted from pose
+    bodyparts = [Bodypart(pose_val // 3) 
+                    for pose_val in pose 
+                    if Bodypart(pose_val // 3) not in bodyparts]
+    
+    feature_to_index_map = generate_guessed_map_of_feature_to_data_index(
+        bodyparts, short=True
+    )
+    # then create column names from those info
+    column_header = ["label"] + ["_tofill_"] * len(feature_to_index_map)
+    for feature_name, feature_idx in feature_to_index_map.items():
+        column_header[feature_idx + 1] = feature_name
+    # finally populate a dataframe with the given data
+    label = label[:feature.shape[1]] # truncate labels by the number of features
+    # len(labels) > len(features) as artifact of padding - have to double check
+    df_data = np.concatenate((np.expand_dims(label, axis=0), feature), 
+                            axis=0).T
+    saved_df = pd.DataFrame(data=df_data, columns=column_header)
+    saved_df.to_csv(lbld_feats_save_path)
