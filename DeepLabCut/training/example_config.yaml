@@ -1,7 +1,0 @@
-Task: Example
-TrainingFraction: '80'
-alphavalue: 12
-batch_size: 999
-bodyparts:
-- bpt1
-- bpt2
