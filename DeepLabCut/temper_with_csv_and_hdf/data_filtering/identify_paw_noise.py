@@ -3,7 +3,7 @@
 # Last modified: 2024/03/20
 
 import os
-from typing import List
+from typing import List, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -116,28 +116,43 @@ def identify_bodypart_noise_in_rest(dlc_csv_path : str, bodypart : str,
     return noise, wrong_frames
 
 def identify_bodypart_noise_by_impossible_speed(
-        dlc_csv_path : str, bodyparts : List[str], 
+        bpt_data : Union[str, pd.DataFrame],
+        bodyparts : List[str],
         start : int, end : int, 
-        threshold : float=IMPOSSIBLE_MOVE_TOLERANCE
+        savedir : str,
+        threshold : float=IMPOSSIBLE_MOVE_TOLERANCE,
+        save_figure : bool=True,
+        show_figure : bool=True
         ):
     """
     Identifies noise of a given body part based on an impossible
     speed, specified as exceeding IMPOSSIBLE_MOVE_TOLERANCE.
 
-    :param str dlc_csv_path: Path to csv holding dlc data.
+    :param str or pd.DataFrame bpt_data: Either a path to csv holding dlc data, or a 
+    pd.DataFrame holding the same data.
     :param List[str] bodypart: A list of body parts we examine for impossible move.
     :param int start: Beginning in frame of the filtering process - not deterministic
     depending on the frame, as we assume that the position of body parts in the 
     start frame is in a "correct" position. Play around with this to get desired result.
     :param int end: End of frames for the filtering process.
+    :param str savedir: Directory to which we save figures.
     :param float threshold: Threshold which if exceeded indicates impossible movement.
     Defaults to IMPOSSIBLE_MOVE_TOLERANCE.
+    :param bool save_figure: Whether to save figures, defaults to True.
+    :param bool show_figure: Whether to show figures, defaults to True.
 
     :returns pd.DataFrame returned_df: A dataframe holding information about identified
     impossible frames & wrong frames based on those impossible frames.
-    With Multiindex of form [all bodyparts] x [impossible_frames, wrong_frames].
+    With Multiindex of form [all bodyparts] x ['imp','wrng','loc_wrng'], with column names 
+    of ['bodyparts', 'content'].
     """
-    df = read_dlc_csv_file(dlc_csv_path, include_scorer=False)
+    if isinstance(bpt_data, str):
+        df = read_dlc_csv_file(bpt_data, include_scorer=False)
+    elif isinstance(bpt_data, pd.DataFrame):
+        df = bpt_data
+    else:
+        raise Exception("bpt_data must be either a path to a DLC csv or a dataframe in the " + 
+                        f"DLC format, but was instead of type {type(bpt_data)}...")
     
     data = []
     
@@ -155,19 +170,25 @@ def identify_bodypart_noise_by_impossible_speed(
         data.append(where_bpt_moved_impossibly)
         
         # visualize where is a noise and where isn't
-        # print(f"There are {np.sum(where_bpt_moved_impossibly)} frames with {bpt} noise!")
-        # plt.step(range(len(where_bpt_moved_impossibly)), where_bpt_moved_impossibly)
-        # plt.title(f"All frames where there is impossible {bpt} movement")
-        # plt.show()
+        print(f"There are {np.sum(where_bpt_moved_impossibly)} frames with {bpt} noise!")
+        if show_figure or save_figure:
+            plt.step(range(len(where_bpt_moved_impossibly)), where_bpt_moved_impossibly)
+            plt.title(f"All frames where there is impossible {bpt} movement")
+        if save_figure: plt.savefig(os.path.join(savedir, f'impossible_{bpt}_movement.png'))
+        if show_figure: plt.show()
+        else: plt.close()
 
         # find frames that are wrong based on the found impossible pattern
         wrong_frames = find_wrong_bodypart_frame(where_bpt_moved_impossibly)
         data.append(wrong_frames)
-        # print("------------")
-        # print(f"There are {np.sum(wrong_frames)} frames where the {bpt} is not in its correct position!")
-        # plt.step(range(len(wrong_frames)), wrong_frames)
-        # plt.title(f"All frames where the {bpt} is wrong in position")
-        # plt.show()
+        print("------------")
+        print(f"There are {np.sum(wrong_frames)} frames where the {bpt} is not in its correct position!")
+        if show_figure or save_figure:
+            plt.step(range(len(wrong_frames)), wrong_frames)
+            plt.title(f"All frames where the {bpt} is wrong in position")
+        if save_figure: plt.savefig(os.path.join(savedir, f'wrong_{bpt}_position.png'))
+        if show_figure: plt.show()
+        else: plt.close()
 
         # find frames that are wrong also incorporating location info
         loc_wrong_frames = find_wrong_bodypart_frame_also_from_location(
@@ -178,9 +199,12 @@ def identify_bodypart_noise_by_impossible_speed(
         print("------------")
         print(f"There are {np.sum(loc_wrong_frames)} frames where, location-based, " + 
               f"the {bpt} is not in its correct position!")
-        plt.step(range(len(loc_wrong_frames)), loc_wrong_frames)
-        plt.title(f"All frames where the {bpt} is wrong in position")
-        plt.show()
+        if show_figure or save_figure:
+            plt.step(range(len(loc_wrong_frames)), loc_wrong_frames)
+            plt.title(f"All frames where the {bpt} is wrong based on location")
+        if save_figure: plt.savefig(os.path.join(savedir, f'location_based_wrong_{bpt}_position.png'))
+        if show_figure: plt.show()
+        else: plt.close()
     
     data = np.array(data).T
     multiidx = pd.MultiIndex.from_product((considered_bpts, ['imp','wrng','loc_wrng']), 
