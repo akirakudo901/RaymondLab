@@ -1,6 +1,6 @@
 # Author: Akira Kudo
 # Created: 2024/04/17
-# Last Updated: 2024/05/15
+# Last Updated: 2024/05/16
 
 import os
 
@@ -82,8 +82,12 @@ def extract_pregenerated_labels_and_compute_features(
 
             # also save the labeled features
             lbld_feats_filename   = clfname + "_" + filename + LABELED_FEATURE_CSV_SUFFIX
+            # first create the folder to hold labeled features
+            lbld_feats_save_folder = os.path.join(save_path, LABELED_FEATURE_FOLDERNAME)
+            if not os.path.exists(lbld_feats_save_folder):
+                os.mkdir(lbld_feats_save_folder)
             create_labeled_feature_csv_from_label_and_feature_array(
-                label=label, feature=feature, save_path=save_path, 
+                label=label, feature=feature, save_path=lbld_feats_save_folder, 
                 pose=pose, lbld_feats_filename=lbld_feats_filename
             )
 

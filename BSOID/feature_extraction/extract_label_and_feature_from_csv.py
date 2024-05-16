@@ -1,6 +1,6 @@
 # Author: Akira Kudo (Copying A TON from the B-SOiD project)
 # Created: 2024/03/19
-# Last updated: 2024/05/15
+# Last updated: 2024/05/16
 
 # These code files were copied on 2024/03/19 from 
 # Visualize_Feature_Distributions_Per_B_SOID_Bout_Cluster.ipynb and the code blocks
@@ -15,10 +15,10 @@ import joblib
 import numpy as np
 import pandas as pd
 
-from BSOID_code.adp_filt import adp_filt
-from BSOID_code.bsoid_extract import bsoid_extract
-from BSOID_code.bsoid_predict import bsoid_predict
-from utils import Bodypart, generate_guessed_map_of_feature_to_data_index
+from .BSOID_code.adp_filt import adp_filt
+from .BSOID_code.bsoid_extract import bsoid_extract
+from .BSOID_code.bsoid_predict import bsoid_predict
+from .utils import Bodypart, generate_guessed_map_of_feature_to_data_index
 
 FEATURE_SAVING_FOLDERS = "./B-SOID_features/results/features"
 FEATURE_FILE_SUFFIX = "_features.npy"
@@ -129,8 +129,13 @@ def extract_label_and_feature_from_csv(filepath : str, pose : List[int],
 
             # then save the labeled feature
             lbld_feats_filename   = clfname + "_" + filename + LABELED_FEATURE_CSV_SUFFIX
+            # first create the folder to hold labeled features
+            lbld_feats_save_folder = os.path.join(save_path, LABELED_FEATURE_FOLDERNAME)
+            if not os.path.exists(lbld_feats_save_folder):
+                os.mkdir(lbld_feats_save_folder)
+        
             create_labeled_feature_csv_from_label_and_feature_array(
-                label=label, feature=feature, save_path=save_path, 
+                label=label, feature=feature, save_path=lbld_feats_save_folder, 
                 pose=pose, lbld_feats_filename=lbld_feats_filename
             )
 
@@ -192,33 +197,28 @@ def create_labeled_feature_csv_from_label_and_feature_array(
         ):
     """
     Takes in a label and feature extracted in B-SOID manner, 
-    creating a csv holding both info and storing it under:
-    * save_path -> LABELED_FEATURE_FOLDERNAME (lbl_feats)
+    creating a csv holding both info and storing it under save_path,
     With given pose and lbld_feats_filename.
 
     :param np.ndarray label: Label of B-SOID - must be the same length
     as feature.shape[0].
     :param np.ndarray feature: Features of B-SOID - feature.shape[0] must
     equal label.shape[0].
-    :param str save_path: Path to which we save results, a subfolder being
-    created under it (LABLED_FEATURE_FOLDERNAME, or lbl_feats).
+    :param str save_path: Path to which we save results.
     :param List[int] pose: A list of indices relative to the csv that specifies
     which body part to use for computation. e.g. [0,1,2,6,7,8] will use those
     columns with those indices for computation.
     :param str lbld_feats_filename: Name of the saved csv.
     """
-    # first create the folder to hold labeled features
-    lbld_feats_save_folder = os.path.join(save_path, LABELED_FEATURE_FOLDERNAME)
-    if not os.path.exists(lbld_feats_save_folder):
-        os.mkdir(lbld_feats_save_folder)
-        
-    lbld_feats_save_path = os.path.join(lbld_feats_save_folder, lbld_feats_filename)
+    lbld_feats_save_path = os.path.join(save_path, lbld_feats_filename)
     if os.path.exists(lbld_feats_save_path):
         print(f"Overwriting labeled feature: - {lbld_feats_filename}")
     # specify which bodypart we consider - predicted from pose
-    bodyparts = [Bodypart(pose_val // 3) 
-                    for pose_val in pose 
-                    if Bodypart(pose_val // 3) not in bodyparts]
+    bodyparts = []
+    for pose_val in pose:
+        bpt = Bodypart(pose_val // 3)
+        if bpt not in bodyparts:
+            bodyparts.append(bpt)
     
     feature_to_index_map = generate_guessed_map_of_feature_to_data_index(
         bodyparts, short=True
