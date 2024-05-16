@@ -114,18 +114,20 @@ def extract_label_and_feature_from_csv(filepath : str, pose : List[int],
 
     if save_result:
         print(f"Saving results to: {save_path}")
-        try:    
-            # save the features
+        try:
+            # save the features - we only overwrite when recompute is True
             feature_save_path = os.path.join(save_path, feature_save_filename)
-            if os.path.exists(feature_save_path):
+            if recompute and os.path.exists(feature_save_path):
                 print(f"Overwriting feature: - {feature_save_filename}")
-            np.save(feature_save_path, feature)
+            if recompute or not os.path.exists(feature_save_path):
+                np.save(feature_save_path, feature)
             
             # then the label
             label_save_path = os.path.join(save_path, label_save_filename)
-            if os.path.exists(label_save_path):
+            if recompute and os.path.exists(label_save_path):
                 print(f"Overwriting label: - {label_save_filename}")
-            np.save(label_save_path, label)
+            if recompute or not os.path.exists(label_save_path):
+                np.save(label_save_path, label)
 
             # then save the labeled feature
             lbld_feats_filename   = clfname + "_" + filename + LABELED_FEATURE_CSV_SUFFIX
@@ -193,7 +195,8 @@ def create_labeled_feature_csv_from_label_and_feature_array(
         feature : np.ndarray,
         save_path : str,
         pose : list,
-        lbld_feats_filename : str
+        lbld_feats_filename : str,
+        overwrite : bool=False
         ):
     """
     Takes in a label and feature extracted in B-SOID manner, 
@@ -209,10 +212,15 @@ def create_labeled_feature_csv_from_label_and_feature_array(
     which body part to use for computation. e.g. [0,1,2,6,7,8] will use those
     columns with those indices for computation.
     :param str lbld_feats_filename: Name of the saved csv.
+    :param bool overwrite: Whether to overwrite a previously existing file
+    with the same path, defaults to False.
     """
     lbld_feats_save_path = os.path.join(save_path, lbld_feats_filename)
-    if os.path.exists(lbld_feats_save_path):
+    if overwrite and os.path.exists(lbld_feats_save_path):
         print(f"Overwriting labeled feature: - {lbld_feats_filename}")
+    elif not overwrite and os.path.exists(lbld_feats_save_path):
+        print(f"Labeled feature exists already, skipping: - {lbld_feats_filename}")
+        return
     # specify which bodypart we consider - predicted from pose
     bodyparts = []
     for pose_val in pose:

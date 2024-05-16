@@ -31,7 +31,7 @@ def extract_pregenerated_labels_and_compute_features(
     :param int fps: Framerate for video. Defaults to 40, given Ellen's project.
     :param bool save_result: Whether to save the computed features under
     save_path. Defaults to true.
-    "param str save_path: The folder to which we save computed features.
+    :param str save_path: The folder to which we save computed features.
     Defaults to FEATURE_SAVING_FOLDERS.
     :param bool recompute: Whether to recompute features saved under load_path.
     :param str load_path: The path from which we attempt to load precomputed
@@ -74,21 +74,38 @@ def extract_pregenerated_labels_and_compute_features(
         data_of_interest = data[idx_of_interest]
         # compute the feature from it
         feature, _ = compute_merged_features_from_csv_data(data_of_interest, fps=fps)
+    
+    if save_result:
+        print(f"Saving results to: {save_path}")
+        try:
+            # save the features - we only overwrite when recompute is True
+            feature_save_path = os.path.join(save_path, feature_save_filename)
+            if recompute and os.path.exists(feature_save_path):
+                print(f"Overwriting feature: - {feature_save_filename}")
+            if recompute or not os.path.exists(feature_save_path):
+                np.save(feature_save_path, feature)
+            
+            # then the label
+            label_save_path = os.path.join(save_path, label_save_filename)
+            if recompute and os.path.exists(label_save_path):
+                print(f"Overwriting label: - {label_save_filename}")
+            if recompute or not os.path.exists(label_save_path):
+                np.save(label_save_path, label)
 
-        if save_result:
-            print(f"Saving results to: {save_path}")
-            np.save(os.path.join(save_path, feature_save_filename), feature)
-            np.save(os.path.join(save_path,   label_save_filename),   label)
-
-            # also save the labeled features
+            # then save the labeled feature
             lbld_feats_filename   = clfname + "_" + filename + LABELED_FEATURE_CSV_SUFFIX
             # first create the folder to hold labeled features
             lbld_feats_save_folder = os.path.join(save_path, LABELED_FEATURE_FOLDERNAME)
             if not os.path.exists(lbld_feats_save_folder):
                 os.mkdir(lbld_feats_save_folder)
+        
             create_labeled_feature_csv_from_label_and_feature_array(
                 label=label, feature=feature, save_path=lbld_feats_save_folder, 
                 pose=pose, lbld_feats_filename=lbld_feats_filename
             )
 
+        except Exception as e:
+            print(e)
+            print("Moving on...")
+    
     return label, feature
