@@ -1,11 +1,11 @@
 # Author: Akira Kudo
 # Created: 2024/03/19
-# Last Updated: 2024/05/15
+# Last Updated: 2024/05/16
 
 import os
 from typing import List
 
-from feature_extraction.extract_label_and_feature_from_csv import extract_label_and_feature_from_csv
+from feature_extraction.extract_label_and_feature_from_csv import create_labeled_feature_csv_from_label_and_feature_array, extract_label_and_feature_from_csv, LABELED_FEATURE_CSV_SUFFIX
 from feature_extraction.extract_pregenerated_labels_and_compute_features import extract_pregenerated_labels_and_compute_features
 
 POSE = list(range(3*6)) # <- 3 (x,y,lhl) columns x 6 body parts
@@ -15,6 +15,7 @@ def do_feature_extraction(csv_path : str,
                           predictions_path : str,
                           clf_sav_path : str,
                           computed_feature_saving_path : str,
+                          feature_loading_path : str,
                           fps : int=40,
                           brute_thresholding : bool=False, 
                           threshold : float=0.8,
@@ -32,6 +33,8 @@ def do_feature_extraction(csv_path : str,
     we use to extract features. 
     :param str computed_feature_saving_path: Path to where we save the 
     computed features & labels & csv. 
+    :param str feature_loading_path: Path from where we load precomputed 
+    features and labels.
     :param int fps: Frame per second used to record the csv_path file, default=40.
     :param bool brute_thresholding: Whether to use brute thresholding when filtering for
     extracted B-SOID features. Only guaranteed if recompute is True, and defauls to false.
@@ -56,7 +59,7 @@ def do_feature_extraction(csv_path : str,
             predictions_path, os.path.basename(csv_path), 
             clf_sav_path=clf_sav_path, fps=fps,
             save_result=save_result, save_path=computed_feature_saving_path,
-            recompute=recompute,  load_path=computed_feature_saving_path
+            recompute=recompute,  load_path=feature_loading_path
             )
         print("End.")
 
@@ -67,7 +70,7 @@ def do_feature_extraction(csv_path : str,
             filepath=csv_path, pose=pose, clf_path=clf_sav_path, fps=fps,
             brute_thresholding=brute_thresholding, threshold=threshold, 
             save_result=save_result, save_path=computed_feature_saving_path,
-            recompute=recompute, load_path=computed_feature_saving_path)
+            recompute=recompute, load_path=feature_loading_path)
         print("End.")
     
     return labels, features
@@ -77,6 +80,7 @@ def do_feature_extraction_from_multiple_folders(
         predictions_path : str,
         clf_sav_path : str,
         computed_feature_saving_path : str,
+        feature_loading_path : str,
         fps : int=40,
         brute_thresholding : bool=False, 
         threshold : float=0.8,                  
@@ -95,6 +99,8 @@ def do_feature_extraction_from_multiple_folders(
     we use to extract features. 
     :param str computed_feature_saving_path: Path to where we save the 
     computed features & labels & csv. 
+    :param str feature_loading_path: Path from where we load precomputed 
+    features and labels.
     :param int fps: Frame per second used to record the csv_path file, default=40.
     :param bool brute_thresholding: Whether to use brute thresholding when filtering for
     extracted B-SOID features. Only guaranteed if recompute is True, and defauls to false.
@@ -122,6 +128,7 @@ def do_feature_extraction_from_multiple_folders(
                                                     predictions_path=predictions_path,
                                                     clf_sav_path=clf_sav_path, 
                                                     computed_feature_saving_path=computed_feature_saving_path, 
+                                                    feature_loading_path=feature_loading_path,
                                                     fps=fps,
                                                     brute_thresholding=brute_thresholding,
                                                     threshold=threshold,
@@ -146,9 +153,12 @@ if __name__ == "__main__":
         _, remaining_path = os.path.splitdrive(path)
         return os.path.join(current_drive, remaining_path)
 
-    CLFPATH = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\BSOID\Q175\Apr082024\output\Apr-08-2024_randomforest.sav"
+    CLFPATH = r"Z:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\BSOID\YAC128\Feb232023\output\Feb-23-2023_randomforest.sav"
+    # CLFPATH = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\BSOID\Q175\Apr082024\output\Apr-08-2024_randomforest.sav"
 
-    SAVEPATH = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\BSOID\feats_labels"
+    SAVEPATH = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\BSOID\results\feats_labels"
+
+    LOADPATH = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\BSOID\results\feats_labels"
 
     PREDICTIONS_PATH = None #r"Z:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\BSOID_data\Q175\Apr082024\output"
 
@@ -161,15 +171,18 @@ if __name__ == "__main__":
     # convert everything to the right file drive
     CLFPATH = convert_to_current_file_drive(CLFPATH)
     SAVEPATH = convert_to_current_file_drive(SAVEPATH)
+    LOADPATH = convert_to_current_file_drive(LOADPATH)
     PREDICTIONS_PATH = convert_to_current_file_drive(PREDICTIONS_PATH)
     CSV_HOLDING_FOLDERS = [convert_to_current_file_drive(file) for file in CSV_HOLDING_FOLDERS]
 
+    
     # do the extraction
     do_feature_extraction_from_multiple_folders(
         csv_holding_folders=CSV_HOLDING_FOLDERS, 
         predictions_path=PREDICTIONS_PATH, 
         clf_sav_path=CLFPATH, 
         computed_feature_saving_path=SAVEPATH,
+        feature_loading_path=LOADPATH
         fps=40, 
         brute_thresholding=False, 
         threshold=0.8, 
