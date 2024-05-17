@@ -1,6 +1,6 @@
 # Author: Akira Kudo
 # Created: -
-# Last updated: 2024/03/28
+# Last updated: 2024/05/17
 
 import os
 
@@ -19,7 +19,8 @@ def plot_mouse_trajectory(csvpath : str, figureName : str,
                           save_path : str=FEATURE_SAVING_FOLDERS):
   """
   Plots how the mouse moved in the cage over time, with points progressively
-  increasing in shade darkness for later time points.
+  increasing in shade darkness for later time points. This trajectory is 
+  smoothed based on adaptive filtering by B-SOID.
   """
   raw_data = pd.read_csv(csvpath, low_memory=False)
   filtered_data, _ = adp_filt(currdf=raw_data, pose=list(range(raw_data.shape[1]-1)))
