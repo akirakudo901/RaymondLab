@@ -1,6 +1,6 @@
 # Author: Akira Kudo
 # Created: 2024/05/12
-# Last Updated: 2024/05/12
+# Last Updated: 2024/05/16
 
 from slack_sdk import WebClient
 
@@ -11,6 +11,15 @@ USERNAME = "U073344PQ2W" # my own username ID
 def send_slack_message(message : str, 
                        token : str=None, 
                        ping_user : str=USERNAME):
+    """
+    Sends a Slack message to my personal channel, with the
+    specified message, OAuth token, and if given, while pinging
+    a specific user (by their user ID).
+
+    :param str message: Message to send on Slack.
+    :param str token: Token for OAuth, defaults to read automatically.
+    :param str ping_user: UserID for user to ping, defaults to USERNAME.
+    """
     if ping_user is not None:
         message = f"<@{ping_user}> " + message
     if token is None:
