@@ -1,8 +1,8 @@
 # Author: Akira Kudo
 # Created: 2024/04/27
-# Last Updated: 2024/04/27
+# Last Updated: 2024/05/19
 # Created: -
-# Last updated: 2024/04/27
+# Last updated: 2024/05/19
 
 import os
 
@@ -10,6 +10,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from dlc_io.utils import read_dlc_csv_file
+
+FIG_X_MAX, FIG_X_MIN, FIG_Y_MAX, FIG_Y_MIN = 1080, 0, 1080, 0
 
 def visualize_mouse_trajectory(csvpath : str, 
                                figureName : str,
@@ -69,14 +71,14 @@ def plot_figure_over_time(X : np.ndarray, Y : np.ndarray,
                 color=blueColor[k])
     plt.xlabel('X'); plt.ylabel('Y')
     plt.title(figureName)
-    plt.xlim(min(X), max(X)); plt.ylim(min(Y), max(Y))
+    plt.xlim(FIG_X_MIN, FIG_X_MAX); plt.ylim(FIG_Y_MIN, FIG_Y_MAX)
 
     if save_figure:
         if not os.path.exists(save_path):
             print(f"{os.path.basename(save_path)} did not exist - created it!")
             os.mkdir(save_path)
         print(f"Saving {figureName} to {save_path}!")
-        plt.savefig(os.path.join(save_path, figureName + '_figure.png'))
+        plt.savefig(os.path.join(save_path, figureName))
 
     if show_figure: plt.show()
     else: plt.close()
