@@ -1,13 +1,14 @@
 # Author: Akira Kudo
 # Created: 2024/03/31
-# Last updated: 2024/05/10
+# Last updated: 2024/05/22
+
+import os
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-from feature_analysis_and_visualization.utils import find_runs
-from feature_analysis_and_visualization.utils import process_upper_and_lower_limit
+from ..utils import find_runs, process_upper_and_lower_limit
 
 LOCOMOTION_LABELS = [38]
 MOVEMENT_THRESHOLD = 0.75
@@ -130,6 +131,74 @@ def visualize_mouse_paw_rests_in_locomomotion(
 
         plt.title(f"Locomotion Paw Stationary Moments {run_start}~{run_end}")
         plt.show()
+
+def visualize_locomotion_stats(label : np.ndarray, 
+                               figure_name : str,
+                               save_path : str,
+                               locomotion_label : list,
+                               num_bins : int=20,
+                               interval : int=40*60*5,
+                               use_logscale : bool=True,
+                               save_figure : bool=True,
+                               show_figure : bool=True):
+    """
+    Visualizes some stats about locomotion labels, namely:
+    - how many locomotion bouts there are
+    - how many of each length of locomotion bouts there are
+    - distribution of the distance between consecutive locomotion bouts
+    - distribution of locomotion over time for every 5 min 
+
+    :param np.ndarray label: Labels given to the time series of DLC data.
+    :param str figure_name: Name of the saved figure file.
+    :param str save_path: Path to which the figure is saved if needed.
+    :param List[int] locomotion_label: List of labels corresponding to locomotion.
+    :param int num_bins: The number of bins in the histograms, defaults to 20.
+    :param int interval: Size of interval in number of frames we want to consider 
+    in showing the distribution of locomotion over time. Defaults to 40*60*5, 
+    5 min interval with fps=40.
+    :param bool use_logscale: Whether to use log scale for the y axis SPECIFICALLY 
+    for the figure of bout length between bouts, defaults to True.
+    :param bool save_figure: Whether to save the figure, defaults to True
+    :param bool show_figure: Whether to show the figure, defaults to True
+    """
+    # 1) Extract all locomotion bouts
+    locomotion_idx, locomotion_lengths = find_locomotion_sequences(
+        label=label,
+        locomotion_label=locomotion_label,
+        length_limits=(None, None)
+        )
+
+    # 2) Visualize info:
+    # - How many locomotion bouts there are
+    # - How many of each length of locomotion bouts there are
+    # - What's the distribution of the distance between two locomotion bouts (curious if bouts are broken down but close together)
+    # - What's the distribution of locomotion for every 5 min interval (just curious)
+    _, axes = plt.subplots(3, 1)
+    axes[0].hist(locomotion_lengths, bins=num_bins, color="blue")
+    axes[0].set_title("Locomotion Bout Lengths")
+    non_loc_bout_start = locomotion_idx[:-1] + locomotion_lengths[:-1]
+    non_loc_bout_end = locomotion_idx[1:] - 1
+    axes[1].hist(non_loc_bout_end - non_loc_bout_start, bins=num_bins, color="red")
+    axes[1].set_title(f"In-between of Locomotion Bout Lengths {'(log scale)' if use_logscale else ''}")
+    if use_logscale: axes[1].set_yscale('log')
+    # plot number of bouts frequency per interval
+    interval_start, interval_end = 0, interval - 1
+    interval_locomotion_quantity = []
+    while interval_start < len(label):
+        interval_label = label[interval_start:interval_end+1]
+        interval_locomotion_quantity.append(np.sum(np.isin(interval_label, locomotion_label)))
+        interval_start += interval; interval_end += interval
+    axes[2].plot(interval_locomotion_quantity, color="green")
+    axes[2].set_title(f"Number of Locomotion Frame Per Interval ({interval} frames)")
+    
+    plt.suptitle(f"Locomotion Stats ({len(locomotion_idx)} bouts)")
+    plt.tight_layout()
+    
+    if save_figure:
+        plt.savefig(os.path.join(save_path, figure_name))
+
+    if show_figure: plt.show()
+    else: plt.close()
 
 
 # HELPER
