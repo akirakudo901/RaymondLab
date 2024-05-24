@@ -19,6 +19,17 @@ photometry, and attempts to:
 - once we have a pairing of possible mice that are identical except typos, merge them by:
    - deciding which mouse name to keep
    - copying the other mouse's trials into the other
+
+To merge two sets of entry for two mice together:
+1) We specify two mice: the main, and the typo.
+2) We identify columns for main & typo, revealing which column in each are empty / not empty.
+3) For every row in typo:
+    - if it isn't empty:
+       - check if the row with the same total trial is non-empty in main
+          - if it is, copy over a specified set of fields
+          - if it isn't skip
+    - if it is empty:
+       - ignore
 """
 
 FAILED = "Failed_"
@@ -57,18 +68,6 @@ def trials_dont_overlap(trial1 : list, trial2 : list):
             return False
     return True
 
-"""
-This is the part where we merge two sets of entry for two mice together.
-1) We specify two mice: the main, and the typo.
-2) We identify columns for main & typo, revealing which column in each are empty / not empty.
-3) For every row in typo:
-    - if it isn't empty:
-       - check if the row with the same total trial is non-empty in main
-          - if it is, copy over a specified set of fields
-          - if it isn't skip
-    - if it is empty:
-       - ignore
-"""
 def merge_two_mice_data_entries(df : pd.DataFrame,
                                 mainmouse : str, 
                                 typomouse : str):
