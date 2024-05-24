@@ -1,0 +1,8 @@
+fileName,Color,Price,StillUsable
+Color1,Green 1,100,0
+Color2,Green 2,200,1
+Color3,Green 3,300,0
+Color4,Green 4,400,1
+Color5,Green 5,500,0
+ThisIsColor1,Green,100,0
+ThisIsColor2,Red,200,1

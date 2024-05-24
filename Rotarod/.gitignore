@@ -1,0 +1,7 @@
+# Any csv must be ignored
+*.csv
+!test*.csv
+
+# Any prism file, .prism / pzfx must be ignored
+*.prism
+*.pzfx
