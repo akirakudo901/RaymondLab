@@ -11,6 +11,11 @@ import tqdm
 from bsoid_io.utils import read_BSOID_labeled_csv, read_BSOID_labeled_features
 from feature_analysis_and_visualization.utils import get_mousename
 
+MOUSENAME = "mousename"
+GROUPNAME = "groupname"
+GROUPPREFIX = "group"
+FRAMECOUNT, PERCENTAGE = "framecount", "percentage"
+
 def compute_time_spent_per_label(label : np.ndarray, 
                                  label_groups : List[int]=None):
     """
@@ -151,11 +156,11 @@ def compute_time_spent_per_label_per_group_from_numpy_array(
         data_for_df.append(framecount_row); data_for_df.append(percentage_row)
 
     # create the dataframe
-    df = pd.DataFrame(data=data_for_df, 
-                      columns=["mousename"]+[f"group{lbl}" for lbl in all_unique_labels] + \
-                              ["groupname"],
+    df = pd.DataFrame(data=data_for_df,
+                      columns=[MOUSENAME]+[f"{GROUPPREFIX}{lbl}" for lbl in all_unique_labels] + \
+                              [GROUPNAME],
                       index=pd.MultiIndex.from_product((list(data_per_mouse.keys()), 
-                                                        ['framecount', 'percentage'])))
+                                                        [FRAMECOUNT, PERCENTAGE])))
     if save_csv:
         df.to_csv(save_path)
     return df
