@@ -1,6 +1,6 @@
 # Author: Akira Kudo
 # Created: 2024/04/01
-# Last updated: 2024/05/14
+# Last updated: 2024/05/16
 
 import os
 import sys
@@ -9,7 +9,7 @@ import sys
 sys.path.append(r"Z:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\RaymondLab\BSOID")
 sys.path.append(r"Z:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\RaymondLab\DeepLabCut")
 
-from BSOID.feature_analysis_and_visualization.visualization.visualize_mouse_gate import visualize_mouse_gait_speed, visualize_mouse_paw_rests_in_locomomotion
+from BSOID.feature_analysis_and_visualization.visualization.visualize_mouse_gait import visualize_mouse_gait_speed, visualize_mouse_paw_rests_in_locomomotion
 from BSOID.bsoid_io.utils import read_BSOID_labeled_csv
 from BSOID.label_behavior_bits.preprocessing import filter_bouts_smaller_than_N_frames
 
