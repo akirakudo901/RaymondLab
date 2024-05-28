@@ -1,0 +1,5 @@
+# Exclude everything in "data"
+/data
+# Exclude anything in test that is a csv
+/test/*.csv
+/test/lib
