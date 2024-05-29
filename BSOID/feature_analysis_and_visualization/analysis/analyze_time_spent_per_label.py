@@ -146,7 +146,8 @@ def compute_time_spent_per_label_per_group_from_numpy_array(
         unique_labels, raw_frame_counts, percentage, grpname = data_per_mouse[mousename]
         # get the sorted framecount & percentage entries into all-zero arrays
         indices = np.isin(element=all_unique_labels, test_elements=unique_labels)
-        framecount_in_row, percentage_in_row = np.zeros_like(all_unique_labels), np.zeros_like(all_unique_labels)
+        framecount_in_row = np.zeros_like(all_unique_labels, dtype=np.int32)
+        percentage_in_row = np.zeros_like(all_unique_labels, dtype=np.float32)
         framecount_in_row[indices] = raw_frame_counts
         percentage_in_row[indices] = percentage
         # form the rows
@@ -159,8 +160,7 @@ def compute_time_spent_per_label_per_group_from_numpy_array(
     df = pd.DataFrame(data=data_for_df,
                       columns=[MOUSENAME]+[f"{GROUPPREFIX}{lbl}" for lbl in all_unique_labels] + \
                               [GROUPNAME],
-                      index=pd.MultiIndex.from_product((list(data_per_mouse.keys()), 
-                                                        [FRAMECOUNT, PERCENTAGE])))
+                      index=[FRAMECOUNT, PERCENTAGE] * len(data_per_mouse))
     if save_csv:
         df.to_csv(save_path)
     return df
