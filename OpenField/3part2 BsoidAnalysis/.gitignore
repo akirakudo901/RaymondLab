@@ -1,0 +1,3 @@
+# Any storage medium of the form .db
+*.db
+/tkteach/ds
