@@ -1,6 +1,6 @@
 # Author: Akira Kudo
 # Created: 2024/03/21
-# Last Updated: 2024/05/27
+# Last Updated: 2024/05/29
 
 import os
 from typing import List
@@ -8,9 +8,10 @@ from typing import List
 import matplotlib.pyplot as plt
 import matplotlib.transforms as transforms
 import numpy as np
+import scipy
 import seaborn as sns
 
-from ..analysis.analyze_time_spent_per_label import compute_time_spent_per_label_per_group_from_numpy_array, GROUPNAME, MOUSENAME, PERCENTAGE
+from ..analysis.analyze_time_spent_per_label import compute_time_spent_per_label_per_group_from_numpy_array, FRAMECOUNT, GROUPNAME, MOUSENAME, PERCENTAGE
 from ..utils import find_runs
 
 LABEL_DELIMITER_VALUE = -1
@@ -207,7 +208,7 @@ def visualize_label_occurrences_heatmaps(
             save_csv=False, show_message=True
             )
     # for each group, one heatmap
-    _, axes = plt.subplots(1, len(group_of_labels), figsize=figsize)
+    _, axes = plt.subplots(len(group_of_labels), 1, figsize=figsize)
     for group_idx, groupname in enumerate(group_names):
         ax = axes if (len(group_names) == 1) else axes[group_idx]
         # we obtain information to plot
@@ -217,8 +218,7 @@ def visualize_label_occurrences_heatmaps(
         group_columns = df.columns[np.logical_not(np.isin(df.columns, [MOUSENAME, GROUPNAME]))]
         # here, we exclude any label occurring less than THRESHOLD to increase visibility
         THRESHOLD = 5
-        all_entry_less_than_thresh = np.any(
-            group_individuals.loc[PERCENTAGE, group_columns] > THRESHOLD, axis=0)
+        all_entry_less_than_thresh = np.any(df.loc[PERCENTAGE, group_columns] > THRESHOLD, axis=0)
         group_columns = group_columns[all_entry_less_than_thresh]
         label_occurrences = group_individuals.loc[PERCENTAGE, group_columns]
         # create a heatmap where each row is an individual and
@@ -247,6 +247,104 @@ def visualize_label_occurrences_heatmaps(
         plt.show()
     else:
         plt.close()
+
+def visualize_group_average_label_occurrences(
+        group_of_labels : List[List[np.ndarray]],
+        group_names : List[str],
+        mousenames : List[List[str]],
+        labels_to_check : List[str],
+        ylabel : str,
+        save_dir : str,
+        save_name : str,
+        xlabel : str="Label Groups",
+        title : str=None,
+        save_figure : bool=True,
+        show_figure : bool=True, 
+        figsize : tuple=(12,6)
+        ):
+    """
+    TODO REWRITE!
+    Takes in a list of 'groups of labels' with corresponding names, 
+    generating a heatmap for the ocurrence of labels. One heatmap is
+    created per group, which rows correspond to mice and columns to labels.
+
+    :param List[List[np.ndarray]] group_of_labels: A list of groups of labels,
+    which are each themselves a list of labels, that we want to quantify & visualize.
+    :param List[str] group_names: The name of groups we wanna observe.
+    :param List[List[str]] mousenames: List of groups of names of mice, each
+    corresponding to the numpy array contained in nparray_groups. Expected to be
+    the same shape as nparray_groups.
+    :param List[int] labels_to_check: List of integer indicating which label groups
+    to consider when storing their time spent, defaults to all labels.
+    :param str ylabel: Label for y-axis.
+    :param str save_dir: Directory for saving figure.
+    :param str save_name: Name of saved figure.
+    :param float vmin: Minimum value to which we anchor the heatmap, defaults 
+    to minimum of all features rendered in a single heatmap.
+    :param float vmax: Maximum value to which we anchor the heatmap, defaults 
+    to maximum of all features rendered in a single heatmap.
+    :param str xlabel: Label for x-axis, defaults to "Label Groups".
+    :param str title: Figure title, defaults to '{xlabel} per {ylabel}'.
+    :param bool save_figure: Whether to save figure, defaults to True.
+    :param bool show_figure: Whether to show figure, defaults to True.
+    :param bool figsize: Size of the rendered figure, defaults to [12, 6] in inches
+    which I believe is fairly big to capture all the groups.
+    """
+    COLORS = ['red', 'blue', 'green', 'purple', 'black', 'yellow']
+    # make sure the number of groups and their names match
+    if len(group_of_labels) != len(group_names):
+        raise Exception("group_of_labels and group_names have to be the same length...")
+    
+    # set default title if not given
+    if title is None:
+        title = f'{xlabel} per {ylabel}'
+    
+    # create a data frame holding information on label occurrence
+    df = compute_time_spent_per_label_per_group_from_numpy_array(
+            nparray_groups=group_of_labels,
+            mousenames=mousenames,
+            group_names=group_names,
+            save_path=None,
+            label_groups=labels_to_check,
+            save_csv=False, show_message=True
+            )
+    # for each group, one heatmap
+    _, ax = plt.subplots(figsize=figsize)
+    for group_idx, groupname in enumerate(group_names):
+        # we obtain information to plot
+        group_individuals = df[df[GROUPNAME] == groupname]
+        group_columns = df.columns[np.logical_not(np.isin(df.columns, [MOUSENAME, GROUPNAME]))]
+        label_occurrences = group_individuals.loc[FRAMECOUNT, group_columns]
+        avg_label_occurrences = np.mean(label_occurrences, axis=0)
+        # create a plot for this group
+        yerr = scipy.stats.sem(label_occurrences, axis=0)
+        ax.errorbar([int(item) for item in group_columns.str.replace('group', '').tolist()],
+                    avg_label_occurrences.to_numpy(), fmt='-o', capsize=5, 
+                    yerr=yerr, label=groupname, color=COLORS[group_idx])
+        ax.legend()
+
+        # ax.step([int(item) for item in group_columns.str.replace('group', '').tolist()], 
+        #         avg_label_occurrences.to_numpy(),
+        #         label=groupname, color=COLORS[group_idx])
+        
+        
+        
+        # set labels selectively
+        ax.set_xlabel(xlabel)
+        if group_idx == 0: ax.set_ylabel('Individuals')
+
+    # set the other settingss
+    plt.suptitle(title)
+    plt.tight_layout()
+
+    if save_figure:
+        plt.savefig(os.path.join(save_dir, save_name))
+    
+    if show_figure:
+        plt.show()
+    else:
+        plt.close()
+
 
 if __name__ == "__main__":
     LABEL_NUMPY_DIR = r"Z:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\RaymondLab\BSOID_related\feature_extraction\results"
