@@ -1,6 +1,6 @@
 # Author: Akira Kudo
 # Created: 2024/04/28
-# Last Updated: 2024/04/29
+# Last Updated: 2024/05/29
 
 import os
 
@@ -77,6 +77,7 @@ def do_visualize_dlc_basic_analysis_in_plot(csvfile : str,
                                             ylabel=var_name,
                                             title=f"{var_name} Per Mouse Type",
                                             colors=colors,
+                                            sex_marker=['.', 'x'],
                                             save_figure=True,
                                             save_dir=save_dir,
                                             save_name=fig_name,
@@ -112,5 +113,33 @@ if __name__ == "__main__":
                                                     truncated=trunc_or_untrunc, 
                                                     colors=colors)
     
-    render_figures_for_group("Q175")
-    render_figures_for_group("YAC128")
+    # render_figures_for_group("Q175")
+    # render_figures_for_group("YAC128")
+
+    if True:
+        MOUSE_GROUPNAME = "Q175"
+        SAVE_DIR = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\DLC\{}\fig".format(MOUSE_GROUPNAME)
+        CSV_PATH = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\RaymondLab\OpenField\3part1 MatlabAndPrismAnalysis\MATLAB\openfield_photometry_30min_DLC\data\results\2024_05_28_new_mice_Q175_analysis_data_unfilt.csv"
+
+        colors = ['red', 'blue']
+
+        do_visualize_dlc_basic_analysis_in_plot(csvfile=CSV_PATH,
+                                                save_dir=SAVE_DIR,
+                                                mouse_groupname=MOUSE_GROUPNAME,
+                                                filtered=False,
+                                                truncated=False, 
+                                                colors=colors)
+    
+    if False:
+        MOUSE_GROUPNAME = "YAC128"
+        SAVE_DIR = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\DLC\{}\fig".format(MOUSE_GROUPNAME)
+        CSV_PATH = r"C:\Users\mashi\Desktop\temp\YAC128\basic_analysis\YAC128_analysis_data_trunc_unfilt_NONMOVINGMOUSE_DROPPED.csv"
+
+        colors = ['black', 'pink']
+
+        do_visualize_dlc_basic_analysis_in_plot(csvfile=CSV_PATH,
+                                                save_dir=SAVE_DIR,
+                                                mouse_groupname=MOUSE_GROUPNAME,
+                                                filtered=False,
+                                                truncated=False,
+                                                colors=colors)

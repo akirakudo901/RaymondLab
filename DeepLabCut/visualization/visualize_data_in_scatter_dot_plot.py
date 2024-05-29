@@ -1,6 +1,6 @@
 # Author: Akira Kudo
 # Created: 2024/04/26
-# Last Updated: 2024/05/06
+# Last Updated: 2024/05/29
 
 import os
 
@@ -12,6 +12,7 @@ import pandas as pd
 MEDIAN_LINESTYPE = '-'
 MEAN_LINESTYPE = '--'
 
+FILENAME = "fileName"
 MOUSETYPE = 'mouseType'
 TOTAL_DISTANCE_CM = 'totalDistanceCm'
 CENTER_TIME = 'centerTime'
@@ -24,6 +25,7 @@ def visualize_data_in_scatter_dot_plot(csv_path : str,
                                         colors : list,
                                         save_dir : str,
                                         save_name : str,
+                                        sex_marker : list=['o', 'o'],
                                         x_val : str=MOUSETYPE,
                                         xlabel : str="Mouse Type",
                                         title : str=None,
@@ -46,6 +48,9 @@ def visualize_data_in_scatter_dot_plot(csv_path : str,
     is given, every column is of the same color.
     :param str save_dir: Directory for saving figure.
     :param str save_name: Name of saved figure.
+    :param list sex_marker: Marker of ['male', 'female'] mice in the dataset to be 
+    rendered on the scatter plot. A list of MarkerStyle, as shown [here](https://matplotlib.org/stable/api/_as_gen/matplotlib.pyplot.scatter.html). 
+    Defaults to ['o', 'o'].
     :param str x_val: Specifies what is rendered as x-label - has to be one
     of columns in the DLC csv. Defaults to MOUSETYPE.
     :param str xlabel: Label for x-axis, defaults to "Mouse Type".
@@ -61,6 +66,10 @@ def visualize_data_in_scatter_dot_plot(csv_path : str,
     # make sure enough colors are specified unambiguously
     if len(colors) != 1 and len(colors) != len(unique_mousetypes):
         raise Exception("Given color have to match the number of mouse types in csv...")
+    # make sure there are two markers specified as sex_marker
+    if len(sex_marker) != 2:
+        raise Exception("Exactly two entries have to be specified for sex_marker, " +
+                        f"but we were provided with {len(sex_marker)}...")
     # otherwise if only one color is specified, set color to the same one
     if len(colors) == 1:
         colors = colors * len(unique_mousetypes)
@@ -72,7 +81,15 @@ def visualize_data_in_scatter_dot_plot(csv_path : str,
     for i, mstp in enumerate(unique_mousetypes):
         X = df[x_val].loc[df[MOUSETYPE] == mstp]
         Y = df[y_val].loc[df[MOUSETYPE] == mstp]
-        ax.scatter(X, Y, color=colors[i])
+            
+        for sex_abbrev, sex, marker in zip(['m','f'], ['male','female'], sex_marker):
+            X_by_sex = X.loc[df[FILENAME].str.contains(sex_abbrev)]
+            Y_by_sex = Y.loc[df[FILENAME].str.contains(sex_abbrev)]
+            if sex_marker[0] == sex_marker[1]:
+                ax.scatter(X_by_sex, Y_by_sex, color=colors[i], marker=marker)
+            else:
+                ax.scatter(X_by_sex, Y_by_sex, color=colors[i], marker=marker, label=sex)
+        
         # set boundaries for mean & median bars
         barwidth = 1/3/(len(unique_mousetypes) + 1)
         xmax = (i+1) / (len(unique_mousetypes) + 1) - barwidth
@@ -80,11 +97,11 @@ def visualize_data_in_scatter_dot_plot(csv_path : str,
         # if show_mean is true, show mean
         if show_mean:
             ax.axhline(y=np.mean(Y), xmax=xmax, xmin=xmin,
-                       color=colors[i], linestyle=MEAN_LINESTYPE)
+                    color=colors[i], linestyle=MEAN_LINESTYPE)
         # if show_median is true, show median
         if show_median:
             ax.axhline(y=np.median(Y), xmax=xmax, xmin=xmin,
-                       color=colors[i], linestyle=MEDIAN_LINESTYPE)
+                    color=colors[i], linestyle=MEDIAN_LINESTYPE)
     
     # set the legend manually for median and mean
     median_line = mlines.Line2D([],[], color='black', 

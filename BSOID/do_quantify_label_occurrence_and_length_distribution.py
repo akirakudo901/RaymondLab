@@ -1,12 +1,12 @@
 # Author: Akira Kudo
 # Created: 2024/04/04
-# Last Updated: 2024/05/27
+# Last Updated: 2024/05/29
 
 import os
 
 import numpy as np
 
-from feature_analysis_and_visualization.visualization.quantify_labels import quantify_label_occurrence_and_length_distribution, visualize_label_occurrences_heatmaps
+from feature_analysis_and_visualization.visualization.quantify_labels import quantify_label_occurrence_and_length_distribution, visualize_label_occurrences_heatmaps, visualize_group_average_label_occurrences
 from bsoid_io.utils import read_BSOID_labeled_csv, read_BSOID_labeled_features
 from feature_analysis_and_visualization.utils import get_mousename
 
@@ -54,8 +54,8 @@ if False:
 if True:
     import os
     # SETTING
-    MOUSETYPE = "Q175-B6" if True else "YAC128-FVB"
-    SEPEARATE_WT_AND_HD = False
+    MOUSETYPE = "Q175-B6" if False else "YAC128-FVB"
+    SEPEARATE_WT_AND_HD = True
 
     Q175_FOLDER = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\BSOID\Q175\labeled_features\allcsv_2024_05_16_Akira"
     YAC_FOLDER = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\BSOID\YAC128\labeled_features\allcsv_2024_05_16_Akira"
@@ -109,19 +109,36 @@ if True:
             for csvpath_group in CSV_PATH_LIST
     ]
 
-    visualize_label_occurrences_heatmaps(
-        group_of_labels=LABEL_LIST,
-        group_names=GROUPNAMES,
-        mousenames=MOUSENAMES,
-        labels_to_check=None,
-        ylabel="Individuals",
-        save_dir=save_folder,
-        save_name=f"behavior_label_occurrence_{MOUSETYPE}{'separate' if SEPEARATE_WT_AND_HD else ''}",
-        vmin=None,
-        vmax=None,
-        xlabel="Label Groups",
-        title=f"Behavior Label Occurrence (%) for {MOUSETYPE}",
-        save_figure=False,
-        show_figure=True,
-        figsize=(12,6)
-    )
+    if True:
+        visualize_label_occurrences_heatmaps(
+            group_of_labels=LABEL_LIST,
+            group_names=GROUPNAMES,
+            mousenames=MOUSENAMES,
+            labels_to_check=None,
+            ylabel="Individuals",
+            save_dir=save_folder,
+            save_name=f"behavior_label_occurrence_{MOUSETYPE}{'separate' if SEPEARATE_WT_AND_HD else ''}_vert",
+            vmin=None,
+            vmax=None,
+            xlabel="Label Groups",
+            title=f"Behavior Label Occurrence (%) for {MOUSETYPE}",
+            save_figure=True,
+            show_figure=True,
+            figsize=(12,6)
+        )
+
+    if False:
+        visualize_group_average_label_occurrences(
+            group_of_labels=LABEL_LIST,
+            group_names=GROUPNAMES,
+            mousenames=MOUSENAMES,
+            labels_to_check=None,
+            ylabel="Individuals",
+            save_dir=save_folder,
+            save_name=f"behavior_label_occurrence_{MOUSETYPE}{'separate' if SEPEARATE_WT_AND_HD else ''}",
+            xlabel="Label Groups",
+            title=f"Behavior Label Occurrence (%) for {MOUSETYPE}",
+            save_figure=False,
+            show_figure=True,
+            figsize=(12,6)
+            )
