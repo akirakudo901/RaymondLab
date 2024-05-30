@@ -1,10 +1,10 @@
 # Author: Akira Kudo
 # Created: 2024/04/28
-# Last Updated: 2024/05/29
+# Last Updated: 2024/05/30
 
 import os
 
-from visualization.visualize_data_in_dot_and_whisker_plot import visualize_data_in_dot_and_whisker_plot, visualize_data_per_individual_in_quadrants, TIME_FRACTION_BY_QUADRANT, DISTANCE_BY_INTERVALS
+from visualization.visualize_data_in_dot_and_whisker_plot import visualize_data_in_dot_and_whisker_plot, visualize_data_per_individual_in_quadrants, CENTERTIME_BY_INTERVALS, TIME_FRACTION_BY_QUADRANT, DISTANCE_BY_INTERVALS
 from visualization.visualize_data_in_scatter_dot_plot import visualize_data_in_scatter_dot_plot, CENTER_TIME, TOTAL_DISTANCE_CM
 
 def do_visualize_dlc_basic_analysis_in_plot(csvfile : str,
@@ -12,7 +12,9 @@ def do_visualize_dlc_basic_analysis_in_plot(csvfile : str,
                                             mouse_groupname : str,
                                             filtered : bool,
                                             truncated : bool, 
-                                            colors : list):
+                                            colors : list, 
+                                            save_figure : bool=True, 
+                                            show_figure : bool=True):
     # first determine the rendering file name
     filtered_or_unfiltered = 'filtered' if filtered else 'unfiltered'
     trunc_or_untrunc = 'trunc' if truncated else 'untrunc'
@@ -20,16 +22,21 @@ def do_visualize_dlc_basic_analysis_in_plot(csvfile : str,
 
     # define the details of the visualization for dot & whisker plot
     to_visualize_with_dot_and_whisker = [
-        [[DISTANCE_BY_INTERVALS, 'Unnamed: 9', 'Unnamed: 10', 'Unnamed: 11', 'Unnamed: 12', 'Unnamed: 13'],
+        [[DISTANCE_BY_INTERVALS, 'Unnamed: 15', 'Unnamed: 16', 'Unnamed: 17', 'Unnamed: 18', 'Unnamed: 19'],
          ['0~5','5~10','10~15','15~20','20~25','25~30'],
          "Interval (min)",
          'Distance By Intervals (cm)',     
-         f"DistanceByIntervalsCmPerMouseType_{suffix}.png"]
+         f"DistanceByIntervalsCmPerMouseType_{suffix}.png"],
+         [[CENTERTIME_BY_INTERVALS, 'Unnamed: 5', 'Unnamed: 6', 'Unnamed: 7', 'Unnamed: 8', 'Unnamed: 9'],
+         ['0~5','5~10','10~15','15~20','20~25','25~30'],
+         "Interval (min)",
+         'Center Time By Intervals (%)',     
+         f"CenterTimeByIntervalsPercPerMouseType_{suffix}.png"]
     ]
 
     # define the details of the visualization for individuals per quadrants
     to_visualize_with_individuals_in_quadrants = [
-        [[TIME_FRACTION_BY_QUADRANT, 'Unnamed: 5', 'Unnamed: 6', 'Unnamed: 7'], 
+        [[TIME_FRACTION_BY_QUADRANT, 'Unnamed: 11', 'Unnamed: 12', 'Unnamed: 13'], 
          ['1', '2', '3', '4'],
          "Quadrant number",
          'Time Fraction By Quadrant (%)', 
@@ -51,10 +58,10 @@ def do_visualize_dlc_basic_analysis_in_plot(csvfile : str,
                                             ylabel=var_name,
                                             title=f"{var_name} Per Mouse Type",
                                             colors=colors,
-                                            save_figure=True,
+                                            save_figure=save_figure,
                                             save_dir=save_dir,
                                             save_name=fig_name,
-                                            show_figure=False)
+                                            show_figure=show_figure)
     
     for visualized_var, x_vals, xlabel, var_name, fig_name in to_visualize_with_individuals_in_quadrants:
         visualize_data_per_individual_in_quadrants(csvfile,
@@ -64,10 +71,10 @@ def do_visualize_dlc_basic_analysis_in_plot(csvfile : str,
                                             ylabel=var_name,
                                             title=f"{var_name} Per Mouse Type ({mouse_groupname})",
                                             colors=colors,
-                                            save_figure=True,
+                                            save_figure=save_figure,
                                             save_dir=save_dir,
                                             save_name=fig_name,
-                                            show_figure=False, 
+                                            show_figure=show_figure, 
                                             vmin=0, vmax=100) # quadrant by percentage!
 
     for visualized_var, var_name, fig_name in to_visualize_scatter:
@@ -78,10 +85,10 @@ def do_visualize_dlc_basic_analysis_in_plot(csvfile : str,
                                             title=f"{var_name} Per Mouse Type",
                                             colors=colors,
                                             sex_marker=['.', 'x'],
-                                            save_figure=True,
+                                            save_figure=save_figure,
                                             save_dir=save_dir,
                                             save_name=fig_name,
-                                            show_figure=False,
+                                            show_figure=show_figure,
                                             show_mean=True,
                                             show_median=True)
 
@@ -111,12 +118,14 @@ if __name__ == "__main__":
                                                     mouse_groupname=mouse_groupname,
                                                     filtered=filter_or_unfiltered,
                                                     truncated=trunc_or_untrunc, 
-                                                    colors=colors)
+                                                    colors=colors, 
+                                                    save_figure=True,
+                                                    show_figure=False)
     
     # render_figures_for_group("Q175")
     # render_figures_for_group("YAC128")
 
-    if True:
+    if False:
         MOUSE_GROUPNAME = "Q175"
         SAVE_DIR = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\DLC\{}\fig".format(MOUSE_GROUPNAME)
         CSV_PATH = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\RaymondLab\OpenField\3part1 MatlabAndPrismAnalysis\MATLAB\openfield_photometry_30min_DLC\data\results\2024_05_28_new_mice_Q175_analysis_data_unfilt.csv"
@@ -128,12 +137,14 @@ if __name__ == "__main__":
                                                 mouse_groupname=MOUSE_GROUPNAME,
                                                 filtered=False,
                                                 truncated=False, 
-                                                colors=colors)
+                                                colors=colors, 
+                                                save_figure=False,
+                                                show_figure=True)
     
-    if False:
+    if True:
         MOUSE_GROUPNAME = "YAC128"
         SAVE_DIR = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\DLC\{}\fig".format(MOUSE_GROUPNAME)
-        CSV_PATH = r"C:\Users\mashi\Desktop\temp\YAC128\basic_analysis\YAC128_analysis_data_trunc_unfilt_NONMOVINGMOUSE_DROPPED.csv"
+        CSV_PATH = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\RaymondLab\OpenField\3part1 MatlabAndPrismAnalysis\MATLAB\openfield_photometry_30min_DLC\data\results\WithCenterTimeOverTime_YAC128_analysis_data_unfilt.csv"
 
         colors = ['black', 'pink']
 
@@ -142,4 +153,6 @@ if __name__ == "__main__":
                                                 mouse_groupname=MOUSE_GROUPNAME,
                                                 filtered=False,
                                                 truncated=False,
-                                                colors=colors)
+                                                colors=colors,
+                                                save_figure=True,
+                                                show_figure=False)

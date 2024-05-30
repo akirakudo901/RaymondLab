@@ -1,6 +1,6 @@
 # Author: Akira Kudo
 # Created: 2024/04/27
-# Last Updated: 2024/04/29
+# Last Updated: 2024/05/30
 
 import os
 
@@ -12,6 +12,7 @@ import scipy.stats
 
 FILENAME = 'fileName'
 MOUSETYPE = 'mouseType'
+CENTERTIME_BY_INTERVALS = "centerTimeByIntervals"
 TIME_FRACTION_BY_QUADRANT = 'timeFractionByQuadrant'
 DISTANCE_BY_INTERVALS = 'distanceByIntervals'
 
