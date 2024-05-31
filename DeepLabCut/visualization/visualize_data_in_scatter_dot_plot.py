@@ -1,6 +1,6 @@
 # Author: Akira Kudo
 # Created: 2024/04/26
-# Last Updated: 2024/05/29
+# Last Updated: 2024/05/30
 
 import os
 
@@ -60,6 +60,8 @@ def visualize_data_in_scatter_dot_plot(csv_path : str,
     :param bool save_figure: Whether to save figure, defaults to True.
     :param bool show_figure: Whether to show figure, defaults to True.
     """
+    sex_marker_to_label = {'male' : sex_marker[0], 'female' : sex_marker[1]}
+
     df = pd.read_csv(csv_path)
 
     unique_mousetypes = np.unique(df[MOUSETYPE])
@@ -82,14 +84,13 @@ def visualize_data_in_scatter_dot_plot(csv_path : str,
         X = df[x_val].loc[df[MOUSETYPE] == mstp]
         Y = df[y_val].loc[df[MOUSETYPE] == mstp]
             
-        for sex_abbrev, sex, marker in zip(['m','f'], ['male','female'], sex_marker):
+        for sex, marker in sex_marker_to_label.items():
+            sex_abbrev = sex[0] #use the first letter as abbreviation
             X_by_sex = X.loc[df[FILENAME].str.contains(sex_abbrev)]
             Y_by_sex = Y.loc[df[FILENAME].str.contains(sex_abbrev)]
-            if sex_marker[0] == sex_marker[1]:
-                ax.scatter(X_by_sex, Y_by_sex, color=colors[i], marker=marker)
-            else:
-                ax.scatter(X_by_sex, Y_by_sex, color=colors[i], marker=marker, label=sex)
-        
+
+            ax.scatter(X_by_sex, Y_by_sex, color=colors[i], marker=marker)
+            
         # set boundaries for mean & median bars
         barwidth = 1/3/(len(unique_mousetypes) + 1)
         xmax = (i+1) / (len(unique_mousetypes) + 1) - barwidth
@@ -104,11 +105,16 @@ def visualize_data_in_scatter_dot_plot(csv_path : str,
                     color=colors[i], linestyle=MEDIAN_LINESTYPE)
     
     # set the legend manually for median and mean
-    median_line = mlines.Line2D([],[], color='black', 
-                                linestyle=MEDIAN_LINESTYPE, label='Median')
-    mean_line   = mlines.Line2D([],[], color='black', 
-                                linestyle=MEAN_LINESTYPE,   label='Mean')
-    plt.legend(handles=[median_line, mean_line])
+    median_line = mlines.Line2D([],[], color='black', linestyle=MEDIAN_LINESTYPE)
+    mean_line   = mlines.Line2D([],[], color='black', linestyle=MEAN_LINESTYPE)
+    handles, labels = [median_line, mean_line], ['Median', 'Mean']
+    # add sex markers if they differ
+    if sex_marker[0] != sex_marker[1]:
+        sex_handles = [mlines.Line2D([],[], color='black', marker=marker, linestyle='None')
+                       for marker in sex_marker_to_label.values()]
+        sex_labels = list(sex_marker_to_label.keys())
+        handles, labels = handles + sex_handles, labels + sex_labels
+    plt.legend(handles=handles, labels=labels)
     # set the other settingss
     plt.xlabel(xlabel); plt.ylabel(ylabel)
     plt.suptitle(title)

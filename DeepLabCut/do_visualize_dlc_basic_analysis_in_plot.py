@@ -56,7 +56,7 @@ def do_visualize_dlc_basic_analysis_in_plot(csvfile : str,
                                             y_vals=visualized_var,
                                             xlabel=xlabel,
                                             ylabel=var_name,
-                                            title=f"{var_name} Per Mouse Type",
+                                            title=f"{var_name} Per Mouse Type ({mouse_groupname})",
                                             colors=colors,
                                             save_figure=save_figure,
                                             save_dir=save_dir,
@@ -125,34 +125,46 @@ if __name__ == "__main__":
     # render_figures_for_group("Q175")
     # render_figures_for_group("YAC128")
 
-    if False:
+    if True:
         MOUSE_GROUPNAME = "Q175"
         SAVE_DIR = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\DLC\{}\fig".format(MOUSE_GROUPNAME)
-        CSV_PATH = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\RaymondLab\OpenField\3part1 MatlabAndPrismAnalysis\MATLAB\openfield_photometry_30min_DLC\data\results\2024_05_28_new_mice_Q175_analysis_data_unfilt.csv"
+        
+        CSV_FOLDER = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\RaymondLab\OpenField\3part1 MatlabAndPrismAnalysis\MATLAB\openfield_photometry_30min_DLC\data\results"
+        CSV_PATHS = [
+            os.path.join(CSV_FOLDER, "WithCenterTimeOverTime_Q175_analysis_data_filt.csv"),
+            os.path.join(CSV_FOLDER, "WithCenterTimeOverTime_Q175_analysis_data_unfilt.csv"),
+        ]
 
         colors = ['red', 'blue']
 
-        do_visualize_dlc_basic_analysis_in_plot(csvfile=CSV_PATH,
-                                                save_dir=SAVE_DIR,
-                                                mouse_groupname=MOUSE_GROUPNAME,
-                                                filtered=False,
-                                                truncated=False, 
-                                                colors=colors, 
-                                                save_figure=False,
-                                                show_figure=True)
+        for csv in CSV_PATHS:
+            do_visualize_dlc_basic_analysis_in_plot(csvfile=csv,
+                                                    save_dir=SAVE_DIR,
+                                                    mouse_groupname=MOUSE_GROUPNAME,
+                                                    filtered='unfilt' not in csv,
+                                                    truncated=False, 
+                                                    colors=colors,
+                                                    save_figure=True,
+                                                    show_figure=True)
     
     if True:
         MOUSE_GROUPNAME = "YAC128"
         SAVE_DIR = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\DLC\{}\fig".format(MOUSE_GROUPNAME)
-        CSV_PATH = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\RaymondLab\OpenField\3part1 MatlabAndPrismAnalysis\MATLAB\openfield_photometry_30min_DLC\data\results\WithCenterTimeOverTime_YAC128_analysis_data_unfilt.csv"
+        
+        CSV_FOLDER = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\RaymondLab\OpenField\3part1 MatlabAndPrismAnalysis\MATLAB\openfield_photometry_30min_DLC\data\results"
+        CSV_PATHS = [
+            os.path.join(CSV_FOLDER, "WithCenterTimeOverTime_YAC128_analysis_data_filt.csv"),
+            os.path.join(CSV_FOLDER, "WithCenterTimeOverTime_YAC128_analysis_data_unfilt.csv"),
+        ]
 
         colors = ['black', 'pink']
 
-        do_visualize_dlc_basic_analysis_in_plot(csvfile=CSV_PATH,
-                                                save_dir=SAVE_DIR,
-                                                mouse_groupname=MOUSE_GROUPNAME,
-                                                filtered=False,
-                                                truncated=False,
-                                                colors=colors,
-                                                save_figure=True,
-                                                show_figure=False)
+        for csv in CSV_PATHS:
+            do_visualize_dlc_basic_analysis_in_plot(csvfile=csv,
+                                                    save_dir=SAVE_DIR,
+                                                    mouse_groupname=MOUSE_GROUPNAME,
+                                                    filtered='unfilt' not in csv,
+                                                    truncated=False,
+                                                    colors=colors,
+                                                    save_figure=True,
+                                                    show_figure=True)
