@@ -1,8 +1,8 @@
 # Author: Akira Kudo
 # Created: 2024/04/27
-# Last Updated: 2024/05/19
+# Last Updated: 2024/05/31
 # Created: -
-# Last updated: 2024/05/19
+# Last updated: 2024/05/31
 
 import os
 
@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from dlc_io.utils import read_dlc_csv_file
+from utils_to_be_replaced_oneday import get_mousename
 
 FIG_X_MAX, FIG_X_MIN, FIG_Y_MAX, FIG_Y_MIN = 1080, 0, 1080, 0
 
@@ -62,15 +63,18 @@ def plot_figure_over_time(X : np.ndarray, Y : np.ndarray,
     chunk_size = (end - start) // 1000
     blueColor = plt.cm.Blues(np.linspace(0.1,1,num_rendering_chunk))
 
-    fig, ax = plt.subplots(figsize=(6,6))
+    _, ax = plt.subplots(figsize=(6,6))
     for k in range(num_rendering_chunk):
         render_start = start + chunk_size * k
         render_end   = start + chunk_size * (k + 1) - 1
         render_end = min(render_end, end)
         ax.plot(X[render_start:render_end], Y[render_start:render_end],
                 color=blueColor[k])
+    
+    plot_title = f"{get_mousename(figureName)} {'filt' if 'filtered' in figureName else 'unfilt'}"
+
     plt.xlabel('X'); plt.ylabel('Y')
-    plt.title(figureName)
+    plt.title(plot_title)
     plt.xlim(FIG_X_MIN, FIG_X_MAX); plt.ylim(FIG_Y_MIN, FIG_Y_MAX)
 
     if save_figure:
