@@ -172,6 +172,38 @@ function analysis(csvPath,saveDir,graphTitle,resultData,skipUserPrompt, ...
     end
     
     disp 'Center time is'; disp(centerTime);
+
+    %% Calculate time percentage spent in center per 5 minutes
+    FRAMES_PER_FIVE_MINUTES = 5 * 60 * FRAMES_PER_SECOND; % 12000 when 40Hz
+    
+    % we compute center time (and later total distance) for the intervals 
+    % number between START_INTERVAL_NUMBER and END_INTERVAL_NUMBER
+    %  e.g. with START_INTERVAL_NUMBER = 1 and END_INTERVAL_NUMBER = 6 
+    %  respectively, we compute for the first to sixth interval
+    START_INTERVAL_NUMBER = 1; END_INTERVAL_NUMBER = 6;
+
+    % obtain a series of 0/1 for frames in and out of center
+    isAtCenter = xcentermin <= BellyX_cm & BellyX_cm <= xcentermax & ...
+                 ycentermin <= BellyY_cm & BellyY_cm <= ycentermax;
+    % obtain how many frames this was for each interval
+    centerTimeByIntervals= computetotalperinterval( ...
+     isAtCenter, FRAMES_PER_FIVE_MINUTES, START_INTERVAL_NUMBER, ...
+     END_INTERVAL_NUMBER ...
+     );
+
+    % convert into percentage by dividing each interval by their length
+    intervalLength = computetotalperinterval( ...
+     ones(length(isAtCenter)), FRAMES_PER_FIVE_MINUTES, ...
+     START_INTERVAL_NUMBER, END_INTERVAL_NUMBER ...
+     );
+    centerTimeByIntervals= centerTimeByIntervals./ intervalLength * 100;
+    
+    if ~SKIP_SAVING
+        save_variable('centerTimeByIntervals','Center time by intervals', ...
+            saveDir,graphTitle)
+    end
+    
+    disp 'Center time by intervals is'; disp(centerTimeByIntervals);
     
     %% Calculate time spent in each of 4 quadrants
     % Quadrants increment clockwise from bottom left quadrant (Quad1) 
@@ -198,43 +230,16 @@ function analysis(csvPath,saveDir,graphTitle,resultData,skipUserPrompt, ...
     end
     
     %% Calculate total distance per 5 minutes
-
-    FRAMES_PER_FIVE_MINUTES = 5 * 60 * FRAMES_PER_SECOND; % 12000 when 40Hz
     
-    % we compute total distance for the intervals number between
-    %  START_INTERVAL_NUMBER and END_INTERVAL_NUMBER
-    %  e.g. with START_INTERVAL_NUMBER = 1 and END_INTERVAL_NUMBER = 6 
-    %  respectively, we compute for the first to sixth interval
-    START_INTERVAL_NUMBER = 1; END_INTERVAL_NUMBER = 6;
-
-    distanceByIntervals = zeros( ...
-        1, END_INTERVAL_NUMBER - START_INTERVAL_NUMBER + 1);
-
-    for i=START_INTERVAL_NUMBER:END_INTERVAL_NUMBER
-        % set the beginning of the interval based on i
-        % for i = 1 only, the beginning is 1 instead of 0
-        intervalStart = FRAMES_PER_FIVE_MINUTES * (i - 1);
-        if (intervalStart <= 0)
-            intervalStart = 1;
-        end
-        % set the end of interval based on i
-        intervalEnd = FRAMES_PER_FIVE_MINUTES * i - 1;
-        % if intervalEnd exceed the actual video length, truncate
-        if length(totaldiff) < intervalEnd
-            disp("Not enough frames for the " + i + "th interval of the " + ...
-                "video: " + length(totaldiff) + " instead of expected " + ... 
-                 intervalEnd + " - truncating.");
-            intervalEnd = length(totaldiff);
-        end
-
-        % obtain the pixel distance for interval i
-        pixelDistance = sum(totaldiff(intervalStart:intervalEnd), 'omitnan');
-        % convert it into cm distance
-        cmDistance = abs(pixelDistance * total_cm);
-        % add result into the array of distance by interval
-        distanceByIntervals(1,i) = cmDistance;
-    end
-    
+    % obtain the pixel distance for each interval
+    pixelDistance = computetotalperinterval( ...
+     totaldiff, FRAMES_PER_FIVE_MINUTES, START_INTERVAL_NUMBER, ...
+     END_INTERVAL_NUMBER ...
+     );
+        
+    % convert it into cm distance
+    distanceByIntervals = abs(pixelDistance * total_cm);
+ 
     if ~SKIP_SAVING
         save_variable('distanceByIntervals', ...
             'Total distance per interval',saveDir,graphTitle)
@@ -268,12 +273,17 @@ function analysis(csvPath,saveDir,graphTitle,resultData,skipUserPrompt, ...
     % mouse type (e.g. something like /WildType/this_csv.csv)
     splitPath = split(csvPath, filesep);
     mouseType = splitPath(end-1);
+
+    newData = struct("mouseType", mouseType,...
+                     "totalDistanceCm", totaldistance_cm,...
+                     "centerTime", centerTime,...
+                     "centerTimeByIntervals", centerTimeByIntervals,...
+                     "timeFractionByQuadrant", timeByQuadFrac,...
+                     "distanceByIntervals", distanceByIntervals...
+                     );
     
-    resultData.adddata(convertCharsToStrings(graphTitle), ...
-                       mouseType, ...
-                       totaldistance_cm, centerTime, ...
-                       timeByQuadFrac, distanceByIntervals);
-    
+    resultData.adddata(convertCharsToStrings(graphTitle), newData);
+
     %% Definition of helper functions
     
     % Produces arrays of x & y coordinates stored in xIdx and yIdx
@@ -293,6 +303,41 @@ function analysis(csvPath,saveDir,graphTitle,resultData,skipUserPrompt, ...
         % interpolate the entries with NaN
         xArray = repnan(xArray,'linear');
         yArray = repnan(yArray,'linear');
+    end
+
+    % Compute total of given series per 5 minutes interval
+    % interval_length : int, number of frames per interval
+    % init_interval, last_interval : int, we compute total 
+    %  of series for the intervals number between them
+    %  e.g. with init_interval = 1 and last_interval = 6 
+    %  respectively, we compute for the first to sixth interval
+    function [seriesPerInterval] = computetotalperinterval( ...
+        series, interval_length, init_interval, last_interval ...
+        )
+        seriesPerInterval = zeros(1, last_interval - init_interval + 1);
+    
+        for i=init_interval:last_interval
+            % set the beginning of the interval based on i
+            % for i = 1 only, the beginning is 1 instead of 0
+            intervalStart = interval_length * (i - 1);
+            if (intervalStart <= 0)
+                intervalStart = 1;
+            end
+            % set the end of interval based on i
+            intervalEnd = interval_length * i - 1;
+            % if intervalEnd exceed the actual video length, truncate
+            if length(series) < intervalEnd
+                disp("Not enough frames for the " + i + "th interval of the " + ...
+                    "video: " + length(series) + " instead of expected " + ... 
+                    intervalEnd + " - truncating.");
+                intervalEnd = length(series);
+            end
+    
+            % obtain the total of the series for interval i
+            intervalTotal = sum(series(intervalStart:intervalEnd), 'omitnan');
+            % add result into the array of series by interval
+            seriesPerInterval(1,i) = intervalTotal;
+        end
     end
     
     % Prints the specified x & y coordinate arrays into a plot and saves
