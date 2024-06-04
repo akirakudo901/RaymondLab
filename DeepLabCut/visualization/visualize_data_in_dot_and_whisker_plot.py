@@ -1,6 +1,6 @@
 # Author: Akira Kudo
 # Created: 2024/04/27
-# Last Updated: 2024/05/30
+# Last Updated: 2024/06/04
 
 import os
 
@@ -16,17 +16,19 @@ CENTERTIME_BY_INTERVALS = "centerTimeByIntervals"
 TIME_FRACTION_BY_QUADRANT = 'timeFractionByQuadrant'
 DISTANCE_BY_INTERVALS = 'distanceByIntervals'
 
-def visualize_data_in_dot_and_whisker_plot(csv_path : str,
-                                        ylabel : str,
-                                        x_vals : list,
-                                        y_vals : list,
-                                        colors : list,
-                                        save_dir : str,
-                                        save_name : str,
-                                        xlabel : str="Mouse Type",
-                                        title : str=None,
-                                        save_figure : bool=True,
-                                        show_figure : bool=True):
+def visualize_data_in_dot_and_whisker_plot_from_csv(
+    csv_path : str,
+    ylabel : str,
+    x_vals : list,
+    y_vals : list,
+    colors : list,
+    save_dir : str,
+    save_name : str,
+    xlabel : str="Mouse Type",
+    title : str=None,
+    save_figure : bool=True,
+    show_figure : bool=True
+    ):
     """
     Takes in a data csv holding information obtained via running analysis.m
     onto multiple DLC csvs; and holding basic analysis info of open field
@@ -48,8 +50,50 @@ def visualize_data_in_dot_and_whisker_plot(csv_path : str,
     :param bool save_figure: Whether to save figure, defaults to True.
     :param bool show_figure: Whether to show figure, defaults to True.
     """
-    df = pd.read_csv(csv_path)
 
+    df = pd.read_csv(csv_path)
+    
+    visualize_data_in_dot_and_whisker_plot_from_dataframe(
+        df=df, ylabel=ylabel, x_vals=x_vals, y_vals=y_vals,
+        colors=colors, save_dir=save_dir, save_name=save_name,
+        xlabel=xlabel, title=title, save_figure=save_figure,
+        show_figure=show_figure
+    )
+
+def visualize_data_in_dot_and_whisker_plot_from_dataframe(
+        df : pd.DataFrame,
+        ylabel : str,
+        x_vals : list,
+        y_vals : list,
+        colors : list,
+        save_dir : str,
+        save_name : str,
+        xlabel : str="Mouse Type",
+        title : str=None,
+        save_figure : bool=True,
+        show_figure : bool=True
+        ):
+    """
+    Takes in a data frame holding information obtained via running analysis.m
+    onto multiple DLC csvs; and holding basic analysis info of open field
+    mouse activity, such as mouseType, totalDistanceCm, centerTime etc.
+
+    Plots the specified feature, aggregated by mouseType into a scatter plot.
+
+    :param pd.DataFrame df: Data frame holding DLC data.
+    :param str ylabel: Label for y-axis.
+    :param list x_vals: Specifies what is rendered at x-ticks in order.
+    :param list y_vals: Specifies the columns that are rendered on the y-axis 
+    in the given order - has to be matching columns in the DLC csv.
+    :param list colors: A list of colors matching each x entries. If only one 
+    is given, every column is of the same color.
+    :param str save_dir: Directory for saving figure.
+    :param str save_name: Name of saved figure.
+    :param str xlabel: Label for x-axis, defaults to "Mouse Type".
+    :param str title: Figure title, defaults to '{xlabel} per {ylabel}'.
+    :param bool save_figure: Whether to save figure, defaults to True.
+    :param bool show_figure: Whether to show figure, defaults to True.
+    """
     # make sure x_vals and y_vals are specified as pairs
     if len(x_vals) != len(y_vals):
         raise Exception("x_vals and y_vals have to be the same length...")
