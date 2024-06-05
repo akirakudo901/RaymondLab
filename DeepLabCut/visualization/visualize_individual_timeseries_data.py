@@ -1,6 +1,6 @@
 # Author: Akira Kudo
 # Created: 2024/05/31
-# Last Updated: 2024/06/04
+# Last Updated: 2024/06/05
 
 import os
 
@@ -173,10 +173,14 @@ def normalize_columns_relative_to_entry(df : pd.DataFrame,
     
     return norm_df
 
-def normalize_distanceByIntervals(df : pd.DataFrame):
+def normalize_distanceByIntervals(df : pd.DataFrame, 
+                                  savedir : str=None,
+                                  savename : str=None):
     """
     Specifically normalizes the 'distanceByIntervals' entry of a typical data
     frame obtained from running basic analysis on DLC data.
+    If given with savedir & savename, save the normalized data frame at savedir
+    with name savename.
     """
     # normalize the data frame
     to_normalize = ['distanceByIntervals', 'Unnamed: 15', 'Unnamed: 16', 
@@ -185,6 +189,10 @@ def normalize_distanceByIntervals(df : pd.DataFrame):
     norm_df = normalize_columns_relative_to_entry(df=df, columns=to_normalize, normalize_to=normalize_to)
     # rename columns
     norm_df.columns = [RENAMED_DISTBYINTER_NORM.get(e, e) for e in norm_df.columns.tolist()]
+    # if given with savename & savedir, save
+    if savedir is not None and savename is not None:
+        print(f"Saving to {savedir}!")
+        norm_df.to_csv(os.path.join(savedir, savename))
     return norm_df
     
 if __name__ == "__main__":
@@ -313,7 +321,7 @@ if __name__ == "__main__":
 
             for csv in CSV_PATHS:
                 df = pd.read_csv(csv)
-                norm_df = normalize_distanceByIntervals(df)
+                norm_df = normalize_distanceByIntervals(df, savedir=CSV_FOLDER, savename=os.path.basename(csv))
 
                 visualize_distance_and_centertime_by_intervals_from_dataframe(
                     df=norm_df,
