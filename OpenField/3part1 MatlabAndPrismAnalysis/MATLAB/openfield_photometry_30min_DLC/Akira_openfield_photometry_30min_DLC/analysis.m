@@ -4,12 +4,15 @@
 % Currently separated so that we can run a test on them - but ultimately
 % I aim to merge it back into one script file to reduce confusion.
 
+% xmax, xmin, ymax, ymin - Used to specify the max & min positions of the 
+%  cage sides in coordinates. If given as NaN, will use the max & min of 
+%  the snout X&Y arrays. Put here in order to allow correct computation of
+%  cases where the mouse didn't cover the entire cage.
 function analysis(csvPath,saveDir,graphTitle,resultData,skipUserPrompt, ...
-    displayFigure)
+    displayFigure, xmax, xmin, ymax, ymin)
 
     %% Define useful constants
     SKIP_SAVING = true;
-
 
     %% Get file and plot mouse position over time using TailBase position
     % Video used to be analyzed from 0:30 ~ 30:30
@@ -74,6 +77,15 @@ function analysis(csvPath,saveDir,graphTitle,resultData,skipUserPrompt, ...
     BellyY =       BellyY(TIME_START:TIME_END);
     SnoutX =       SnoutX(TIME_START:TIME_END);
     SnoutY =       SnoutY(TIME_START:TIME_END);
+
+    % Calibrate [xmax,xmin,ymax,ymin] as appropriate
+    if ~isnan(xmax) && ~isnan(xmin) && ~isnan(ymax) && ~isnan(ymin)
+        disp("All of xmax,xmin,ymax,ymin were provided successfully.")
+        disp("These values will be used to calculate the boundaries of the cage!")
+    else % otherwise, we use the positions of the snout to find the boundaries of the cage
+        xmax = max(SnoutX); xmin = min(SnoutX); 
+        ymax = max(SnoutY); ymin = min(SnoutY);
+    end
     
     % Plot & save figures using function defined at end of script
     tailBasePlotName = append(graphTitle, ' Tail Base Coordinates');
@@ -119,9 +131,9 @@ function analysis(csvPath,saveDir,graphTitle,resultData,skipUserPrompt, ...
     CAGE_Y_SIDE_LENGTH_CM = 38;
     CAGE_DIAGONAL_LENGTH_CM = 53.7401153702;
     
-    % get the range of x / y pixel values the Snout array can take
-    xrange = max(SnoutX) - min(SnoutX);
-    yrange = max(SnoutY) - min(SnoutY);
+    % get the range of x / y pixel values belonging to the cage 
+    xrange = xmax - xmin; yrange = ymax - ymin;
+
     % get the length of the diagonal of the rectangle the mice moved in
     totalrange = sqrt(xrange.^2 + yrange.^2);
     % calculate the size of cm/pixel in both directions
@@ -150,15 +162,18 @@ function analysis(csvPath,saveDir,graphTitle,resultData,skipUserPrompt, ...
     end
     
     %% Calculate center time
-    % Convert pixels to cm
-    
     % convert pixels coordinates to cm coordinates
-    SnoutX_cm = SnoutX*x_cm; SnoutY_cm = SnoutY*y_cm;
+    xmax_cm = xmax*x_cm; xmin_cm = xmin*x_cm;
+    ymax_cm = ymax*y_cm; ymin_cm = ymin*y_cm;
     BellyX_cm = BellyX*x_cm; BellyY_cm = BellyY*y_cm;
     
     % determine the max&min in cm coordinates that qualify as "center"
-    xcentermin = (min(SnoutX_cm)+8); xcentermax = (max(SnoutX_cm)-8);
-    ycentermin = (min(SnoutY_cm)+8); ycentermax = (max(SnoutY_cm)-8);
+    DISTANCE_CM_FROM_EDGE_X = 8; DISTANCE_CM_FROM_EDGE_Y = 8;
+    xcentermin = (xmin_cm + DISTANCE_CM_FROM_EDGE_X); 
+    xcentermax = (xmax_cm - DISTANCE_CM_FROM_EDGE_X);
+
+    ycentermin = (ymin_cm + DISTANCE_CM_FROM_EDGE_Y); 
+    ycentermax = (ymax_cm - DISTANCE_CM_FROM_EDGE_Y);
     
     % count the number of frames where Belly is within "center"
     centerTime = sum(xcentermin <= BellyX_cm & BellyX_cm <= xcentermax & ...
@@ -208,8 +223,7 @@ function analysis(csvPath,saveDir,graphTitle,resultData,skipUserPrompt, ...
     %% Calculate time spent in each of 4 quadrants
     % Quadrants increment clockwise from bottom left quadrant (Quad1) 
     % get the middle point
-    xmid = min(SnoutX) + xrange/2;
-    ymid = min(SnoutY) + yrange/2;
+    xmid = xmin + xrange/2; ymid = ymin + yrange/2;
     
     % left bottom, left top, right top, right bottom
     timeQuad1 = sum(BellyX <  xmid & BellyY <= ymid, "omitnan") / FRAMES_PER_SECOND;
