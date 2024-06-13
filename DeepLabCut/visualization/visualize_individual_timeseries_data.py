@@ -1,6 +1,6 @@
 # Author: Akira Kudo
 # Created: 2024/05/31
-# Last Updated: 2024/06/05
+# Last Updated: 2024/06/12
 
 import os
 
@@ -192,7 +192,7 @@ def normalize_distanceByIntervals(df : pd.DataFrame,
     # if given with savename & savedir, save
     if savedir is not None and savename is not None:
         print(f"Saving to {savedir}!")
-        norm_df.to_csv(os.path.join(savedir, savename))
+        norm_df.to_csv(os.path.join(savedir, savename), index=False)
     return norm_df
     
 if __name__ == "__main__":
