@@ -1,6 +1,6 @@
 # Author: Akira Kudo
 # Created: 2024/03/31
-# Last updated: 2024/05/22
+# Last updated: 2024/06/05
 
 import os
 
@@ -176,6 +176,7 @@ def visualize_locomotion_stats(label : np.ndarray,
     _, axes = plt.subplots(3, 1)
     axes[0].hist(locomotion_lengths, bins=num_bins, color="blue")
     axes[0].set_title("Locomotion Bout Lengths")
+    if use_logscale: axes[0].set_yscale('log')
     non_loc_bout_start = locomotion_idx[:-1] + locomotion_lengths[:-1]
     non_loc_bout_end = locomotion_idx[1:] - 1
     axes[1].hist(non_loc_bout_end - non_loc_bout_start, bins=num_bins, color="red")
