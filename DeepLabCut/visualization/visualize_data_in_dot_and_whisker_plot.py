@@ -1,6 +1,6 @@
 # Author: Akira Kudo
 # Created: 2024/04/27
-# Last Updated: 2024/06/04
+# Last Updated: 2024/06/14
 
 import os
 
@@ -34,7 +34,7 @@ def visualize_data_in_dot_and_whisker_plot_from_csv(
     onto multiple DLC csvs; and holding basic analysis info of open field
     mouse activity, such as mouseType, totalDistanceCm, centerTime etc.
 
-    Plots the specified feature, aggregated by mouseType into a scatter plot.
+    Plots the specified feature, aggregated by mouseType into a dot&whisker plot.
 
     :param str csv_path: Path to csv holding DLC data.
     :param str ylabel: Label for y-axis.
@@ -78,7 +78,7 @@ def visualize_data_in_dot_and_whisker_plot_from_dataframe(
     onto multiple DLC csvs; and holding basic analysis info of open field
     mouse activity, such as mouseType, totalDistanceCm, centerTime etc.
 
-    Plots the specified feature, aggregated by mouseType into a scatter plot.
+    Plots the specified feature, aggregated by mouseType into a dot&whisker plot.
 
     :param pd.DataFrame df: Data frame holding DLC data.
     :param str ylabel: Label for y-axis.
