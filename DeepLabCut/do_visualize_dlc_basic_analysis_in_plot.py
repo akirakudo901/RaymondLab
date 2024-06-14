@@ -1,14 +1,14 @@
 # Author: Akira Kudo
 # Created: 2024/04/28
-# Last Updated: 2024/06/13
+# Last Updated: 2024/06/14
 
 import os
 
 import numpy as np
 import pandas as pd
 
-from visualization.visualize_data_in_dot_and_whisker_plot import visualize_data_in_dot_and_whisker_plot_from_dataframe, visualize_data_per_individual_in_quadrants, CENTERTIME_BY_INTERVALS, TIME_FRACTION_BY_QUADRANT, DISTANCE_BY_INTERVALS
-from visualization.visualize_data_in_scatter_dot_plot import visualize_data_in_scatter_dot_plot, CENTER_TIME, TOTAL_DISTANCE_CM
+from visualization.visualize_data_in_dot_and_whisker_plot import visualize_data_in_dot_and_whisker_plot_from_dataframe, visualize_data_per_individual_in_quadrants, FILENAME, CENTERTIME_BY_INTERVALS, TIME_FRACTION_BY_QUADRANT, DISTANCE_BY_INTERVALS
+from visualization.visualize_data_in_scatter_dot_plot import visualize_data_in_scatter_dot_plot_from_dataframe, CENTER_TIME, TOTAL_DISTANCE_CM
 from visualization.visualize_individual_timeseries_data import visualize_individual_timeseries_data_from_csv, visualize_individual_timeseries_data_from_dataframe, normalize_distanceByIntervals, RENAMED_DISTBYINTER_NORM
 
 def do_visualize_dlc_basic_analysis_in_plot(csvfile : str,
@@ -18,7 +18,8 @@ def do_visualize_dlc_basic_analysis_in_plot(csvfile : str,
                                             truncated : bool, 
                                             colors : list, 
                                             save_figure : bool=True, 
-                                            show_figure : bool=True):
+                                            show_figure : bool=True,
+                                            sex_side_by_side : bool=False):
     # first determine the rendering file name
     filtered_or_unfiltered = 'filtered' if filtered else 'unfiltered'
     trunc_or_untrunc = 'trunc' if truncated else 'untrunc'
@@ -84,64 +85,83 @@ def do_visualize_dlc_basic_analysis_in_plot(csvfile : str,
     else:
         norm_df = df
     
-    # visualize
-    for visualized_var, x_vals, xlabel, var_name, fig_name in to_visualize_with_dot_and_whisker:
-        visualize_data_in_dot_and_whisker_plot_from_dataframe(
-            df=norm_df,
-            x_vals=x_vals,
-            y_vals=visualized_var,
-            xlabel=xlabel,
-            ylabel=var_name,
-            title=f"{var_name} Per Mouse Type ({mouse_groupname})",
-            colors=colors,
-            save_figure=save_figure,
-            save_dir=save_dir,
-            save_name=fig_name,
-            show_figure=show_figure
-            )
-    
-    for visualized_var, x_vals, xlabel, var_name, fig_name in to_visualize_with_individuals_in_quadrants:
-        visualize_data_per_individual_in_quadrants(csvfile,
-                                            x_vals=x_vals,
-                                            y_vals=visualized_var,
-                                            xlabel=xlabel,
-                                            ylabel=var_name,
-                                            title=f"{var_name} Per Mouse Type ({mouse_groupname})",
-                                            colors=colors,
-                                            save_figure=save_figure,
-                                            save_dir=save_dir,
-                                            save_name=fig_name,
-                                            show_figure=show_figure, 
-                                            vmin=0, vmax=100) # quadrant by percentage!
+    # visualize while putting male and female together and separate
+    male_df   = norm_df[norm_df[FILENAME].str.contains('m')]
+    female_df = norm_df[norm_df[FILENAME].str.contains('f')]
 
-    for visualized_var, var_name, fig_name in to_visualize_scatter:
-        visualize_data_in_scatter_dot_plot(csvfile,
-                                            y_val=visualized_var,
-                                            xlabel=f'Mouse Type ({mouse_groupname})',
-                                            ylabel=var_name,
-                                            title=f"{var_name} Per Mouse Type",
-                                            colors=colors,
-                                            sex_marker=['.', 'x'],
-                                            save_figure=save_figure,
-                                            save_dir=save_dir,
-                                            save_name=fig_name,
-                                            show_figure=show_figure,
-                                            show_mean=True,
-                                            show_median=True)
-    
-    for visualized_var, x_vals, xlabel, var_name, fig_name in to_visualize_individuals_as_timeseries:
-        visualize_individual_timeseries_data_from_dataframe(
-            df=norm_df,
-            x_vals=x_vals,
-            y_vals=visualized_var,
-            xlabel=xlabel,
-            ylabel=var_name,
-            title=f"{var_name} Per Mouse Type ({mouse_groupname})",
-            colors=colors,
-            save_figure=save_figure,
-            save_dir=save_dir,
-            save_name=fig_name,
-            show_figure=show_figure)
+    # save figures in different folders: mNf, m and f
+    all_df = [norm_df]; sex_folders = ['mNf']; sex_name = ['Male And Female']
+    # we will only create the male only & female if we aren't creating side by side 
+    # plots in terms of the different sexes
+    if not sex_side_by_side and len(male_df) != 0: 
+        all_df.append(male_df); sex_folders.append('m'); sex_name.append('Male Only')
+    if not sex_side_by_side and len(female_df) != 0: 
+        all_df.append(female_df); sex_folders.append('f'); sex_name.append('Female Only')
+
+    for sex_diff_df, foldername, sex in zip(all_df, sex_folders, sex_name):
+        fullpath_sexfolder = os.path.join(save_dir, foldername)
+        if not os.path.exists(fullpath_sexfolder):
+            os.mkdir(fullpath_sexfolder)
+        
+        for visualized_var, x_vals, xlabel, var_name, fig_name in to_visualize_with_dot_and_whisker:
+            visualize_data_in_dot_and_whisker_plot_from_dataframe(
+                df=sex_diff_df,
+                x_vals=x_vals,
+                y_vals=visualized_var,
+                xlabel=xlabel,
+                ylabel=var_name,
+                title=f"{var_name} Per Mouse Type ({mouse_groupname}, {sex})",
+                colors=colors,
+                save_figure=save_figure,
+                save_dir=fullpath_sexfolder,
+                save_name=fig_name,
+                show_figure=show_figure
+                )
+        
+        for visualized_var, x_vals, xlabel, var_name, fig_name in to_visualize_with_individuals_in_quadrants:
+            visualize_data_per_individual_in_quadrants(csvfile,
+                                                x_vals=x_vals,
+                                                y_vals=visualized_var,
+                                                xlabel=xlabel,
+                                                ylabel=var_name,
+                                                title=f"{var_name} Per Mouse Type ({mouse_groupname})",
+                                                colors=colors,
+                                                save_figure=save_figure,
+                                                save_dir=fullpath_sexfolder,
+                                                save_name=fig_name,
+                                                show_figure=show_figure, 
+                                                vmin=0, vmax=100) # quadrant by percentage!
+
+        for visualized_var, var_name, fig_name in to_visualize_scatter:
+            visualize_data_in_scatter_dot_plot_from_dataframe(sex_diff_df,
+                                                y_val=visualized_var,
+                                                xlabel=f'Mouse Type',
+                                                ylabel=var_name,
+                                                title=f"{var_name} Per Mouse Type ({mouse_groupname}, {sex})",
+                                                colors=colors,
+                                                sex_marker=['.', 'x'],
+                                                save_figure=save_figure,
+                                                save_dir=fullpath_sexfolder,
+                                                save_name=fig_name,
+                                                # show_figure=show_figure, TODO FIX
+                                                show_figure=True, #TODO FIX
+                                                show_mean=True,
+                                                show_median=True,
+                                                side_by_side=sex_side_by_side)
+        
+        for visualized_var, x_vals, xlabel, var_name, fig_name in to_visualize_individuals_as_timeseries:
+            visualize_individual_timeseries_data_from_dataframe(
+                df=sex_diff_df,
+                x_vals=x_vals,
+                y_vals=visualized_var,
+                xlabel=xlabel,
+                ylabel=var_name,
+                title=f"{var_name} Per Mouse Type ({mouse_groupname}, {sex})",
+                colors=colors,
+                save_figure=save_figure,
+                save_dir=fullpath_sexfolder,
+                save_name=fig_name,
+                show_figure=show_figure)    
 
 if __name__ == "__main__":
     def render_figures_for_group(mouse_groupname):
@@ -199,8 +219,9 @@ if __name__ == "__main__":
                                                     filtered='unfilt' not in csv,
                                                     truncated=False, 
                                                     colors=colors,
-                                                    save_figure=True,
-                                                    show_figure=False)
+                                                    save_figure=False,
+                                                    show_figure=False,
+                                                    sex_side_by_side=True)
             
     if False:
         MOUSE_GROUPNAME = "Q175Black"
