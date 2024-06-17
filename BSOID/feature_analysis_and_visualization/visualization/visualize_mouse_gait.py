@@ -13,6 +13,13 @@ from ..utils import find_runs, process_upper_and_lower_limit
 LOCOMOTION_LABELS = [38]
 MOVEMENT_THRESHOLD = 0.75
 
+# column names for an averaged paw movement data frame
+COL_BODYPART = 'bodypart'
+COL_START = 'start'
+COL_LENGTH = 'length'
+COL_X_AVG = 'x_avg'
+COL_Y_AVG = 'y_avg'
+
 def visualize_mouse_gait_speed(df : pd.DataFrame,
                                 label : np.ndarray, 
                                 bodyparts : list, 
@@ -346,7 +353,7 @@ def filter_nonpawrest_motion(df : pd.DataFrame,
                     new_row = (bpt, start, length, avg_x, avg_y)
                     average_array.append(new_row)
         # make a dataframe out of it
-        columns = ['bodypart', 'start', 'length', 'x_avg', 'y_avg']
+        columns = [COL_BODYPART, COL_START, COL_LENGTH, COL_X_AVG, COL_Y_AVG]
         average_df = pd.DataFrame(data=average_array, 
                                   columns=columns)
 
