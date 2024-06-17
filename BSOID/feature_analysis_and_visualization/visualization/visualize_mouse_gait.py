@@ -144,10 +144,13 @@ def visualize_mouse_paw_rests_in_locomomotion(
         ax.set_xlim([0, 1100]); ax.set_ylim([0, 1100])
         ax.legend()
 
-        plt.title(f"Locomotion Paw Stationary Moments {start}~{end}")
+        plt.title(f"Locomotion Paw Stationary Moments {start}~{end} \n(Threshold={threshold}, Length Limits={length_limits})")
 
         if save_figure:
-            plt.savefig(os.path.join(savedir, f"{savename}_{start}To{end}"))
+            plt.savefig(os.path.join(
+                savedir, 
+                f"{savename.replace('.png', '')}_{start}To{end}_thresh{threshold}_lim{length_limits[0]}To{length_limits[1]}.png")
+                )
         if show_figure:
             plt.show()
         else:
