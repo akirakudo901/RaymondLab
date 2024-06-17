@@ -1,6 +1,6 @@
 # Author: Akira Kudo
 # Created: 2024/03/31
-# Last updated: 2024/06/05
+# Last updated: 2024/06/17
 
 import os
 
@@ -79,49 +79,64 @@ def visualize_mouse_gait_speed(df : pd.DataFrame,
 def visualize_mouse_paw_rests_in_locomomotion(
         df : pd.DataFrame,
         label : np.ndarray, 
-        bodyparts : list, 
+        bodyparts : list,
+        savedir : str,
+        savename : str,
         length_limits : tuple=(None, None),
         locomotion_label : list=LOCOMOTION_LABELS, 
-        plot_N_runs : int=float("inf")
+        plot_N_runs : int=float("inf"),
+        threshold : float=MOVEMENT_THRESHOLD,
+        save_figure : bool=True,
+        show_figure : bool=True
         ):
-    
-    locomotion_idx, locomotion_lengths = find_locomotion_sequences(
-        label=label, locomotion_label=locomotion_label, length_limits=length_limits)
-    plot_N_runs = min(plot_N_runs, len(locomotion_idx))
+    """
+    Identifies 'plot_N_runs' sequences where label happens consecutively within 
+    range of length_limits, finding the position of paws at rest during these sequences
+    by observing any lack of movement (speed between frames being below threshold).
+    Renders such paw rests as well as the trajectory of non-paw body parts as a 
+    single figure per such sequence. Which body part are rendered can be specified.
 
+    :param pd.DataFrame df: Data frame holding DLC body part data.
+    :param np.ndarray label: Label from B-SOID applied to DLC data.
+    :param list bodyparts: Body parts to render.
+    :param str savedir: Directory to where figures can be saved.
+    :param str savename: Name of the saved figure.
+    :param tuple length_limits: In form (low, high), indicates what range 
+    of bout lengths should be used for visualization. A None at either 
+    position indicates no limit on the upper / lower bound. 
+    Defaults to (None, None), no restriction.
+    :param int locomotion_label: Specifies which labels corresponds to 
+    the locomotion group. Defaults to LOCOMOTION_LABELS.
+    :param int plot_N_runs: The number of runs we plot. Defaults to all.
+    :param float threshold: Threshold separating locomotion movement from 
+    paw rest, defaults to MOVEMENT_THRESHOLD
+    :param bool save_figure: Whether to save the figure, defaults to True
+    :param bool show_figure: Whether to show the figure, defaults to True
+    """
+    
+    starts, ends, _ = select_N_locomotion_sequences(
+        label=label, N=plot_N_runs, locomotion_labels=locomotion_label, 
+        length_limits=length_limits
+        )
+    
     colorclass = plt.cm.ScalarMappable(cmap="rainbow")
     C = colorclass.to_rgba(np.linspace(0, 1, len(bodyparts)))
     colors = C[:, :3]
+
+    df, _ = filter_nonpawrest_motion(df=df, label=label, show_nonpaw=True, 
+                                     threshold=threshold, locomotion_labels=locomotion_label, 
+                                     average_pawrest=True)
     
     # we will render as figure each sequence of movement into a 2D grid
-    for plot_idx in range(plot_N_runs):
+    for start, end in zip(starts, ends):
         _, ax = plt.subplots()
 
         for bpt_idx, bpt in enumerate(bodyparts):
             x, y = df[bpt, 'x'].to_numpy(), df[bpt, 'y'].to_numpy()
-            movement = np.sqrt(np.square(np.diff(x)) + np.square(np.diff(y)))
-            
-            run_start = locomotion_idx[plot_idx]
-            run_end = run_start + locomotion_lengths[plot_idx] - 1
-            run = movement[run_start:run_end+1]
-            run_x, run_y = x[run_start:run_end+1], y[run_start:run_end+1]
+            run_x, run_y = x[start:end+1], y[start:end+1]
 
             if 'paw' in bpt:
-                # obtain where the paw movement starts and ends based on threshold
-                move_start, move_end, _ = find_paw_movements(
-                    run, threshold=MOVEMENT_THRESHOLD)
-                paw_stationary_start = np.insert((move_end[:-1] - 1), 0, 0)
-                paw_stationary_end = move_start - 1
-                # we can then plot while the paw isn't moving
-                average_x, average_y = [], []
-                for pss, pse in zip(paw_stationary_start, paw_stationary_end):
-                    if pss == pse: continue\
-                    # first get the average for every stationary paw moments
-                    average_x.append(np.mean(run_x[pss:pse+1]).item())
-                    average_y.append(np.mean(run_y[pss:pse+1]).item())
-                
-                ax.scatter(average_x, average_y, marker='o',
-                           color=colors[bpt_idx], label=bpt)
+                ax.scatter(run_x, run_y, marker='o', color=colors[bpt_idx], label=bpt)
             else:
                 ax.plot(run_x, run_y, color=colors[bpt_idx], label=bpt)
         ax.set_xlabel('X (pixel)')
@@ -129,8 +144,14 @@ def visualize_mouse_paw_rests_in_locomomotion(
         ax.set_xlim([0, 1100]); ax.set_ylim([0, 1100])
         ax.legend()
 
-        plt.title(f"Locomotion Paw Stationary Moments {run_start}~{run_end}")
-        plt.show()
+        plt.title(f"Locomotion Paw Stationary Moments {start}~{end}")
+
+        if save_figure:
+            plt.savefig(os.path.join(savedir, f"{savename}_{start}To{end}"))
+        if show_figure:
+            plt.show()
+        else:
+            plt.close()
 
 def visualize_locomotion_stats(label : np.ndarray, 
                                figure_name : str,
@@ -253,3 +274,113 @@ def find_paw_movements(movement : np.ndarray, threshold : float=MOVEMENT_THRESHO
     move_end = run_starts[moves] + run_lengths[moves] - 1
     move_middle = (move_start + move_end) // 2
     return move_start, move_end, move_middle
+
+def filter_nonpawrest_motion(df : pd.DataFrame, 
+                             label : np.ndarray,
+                             show_nonpaw : bool=False,
+                             threshold : float=MOVEMENT_THRESHOLD,
+                             locomotion_labels : list=LOCOMOTION_LABELS, 
+                             average_pawrest : bool=True):
+    """
+    Takes in a data frame holding DLC data as well as an array of BSOID label
+    for it, filtering out:
+    - any non-locomotion label frame 
+    - any locomotion label frame which is followed by movement above 'threshold'
+    If average_pawrest, we take each paw rest, averaging the time while it is resting.
+
+    :param pd.DataFrame df: DataFrame holding DLC data.
+    :param np.ndarray label: BSOID label for the DLC data. 
+    :param bool show_nonpaw: Whether to show non-paw body parts, 
+    defaults to False
+    :param float threshold: Threshold separating locomotion movement from 
+    paw rest, defaults to MOVEMENT_THRESHOLD
+    :param list locomotion_labels: Integer labels corresponding to locomotion groups, 
+    defaults to LOCOMOTION_LABEL (38, for YAC128 network).    
+    :param bool average_pawrest: Whether to make each continuous paw rest that is identified
+    averaged, so that a single point is identified. E.g. if the X coord is: 
+    [NaN, 3, 3.2, 3.1, NaN, 5, 4.8, NaN]..., we average this to be:
+    [NaN, 3.1, 3.1, 3.1, NaN, 4.9, 4.9, NaN].
+    """
+    # remove entries in df where movement of 'paws' is above threshold
+    unique_bpts = np.unique(df.columns.get_level_values('bodyparts'))
+    for bpt in unique_bpts:
+        if 'paw' in bpt:
+            x, y = df[bpt, 'x'].to_numpy(), df[bpt, 'y'].to_numpy()
+            movement = np.sqrt(np.diff(x)**2 + np.diff(y)**2)
+            movement = np.insert(movement, 0, 0) # pad first position as no movement
+            df.loc[movement > threshold, [bpt]] = np.nan
+        # completely remove entries for parts like snout and tailbase
+        else:
+            if not show_nonpaw:
+                df.loc[:, [bpt]] = np.nan
+    # remove entries in df that aren't locomotion bouts
+    df.loc[label != locomotion_labels[0], :] = np.nan
+    
+    # if average_pawrest: 1) identify paw rest sequences
+    # 2) replace the entire sequence with its average
+    if average_pawrest:
+        # we also return an "averaged" data frame which holds, for every 
+        # paw sequence: body part, first time stamp, length, x average, y average
+        average_array = []
+        for bpt in unique_bpts:
+            if 'paw' in bpt:
+                isnan_x = np.isnan(df[bpt, 'x'].to_numpy())
+                run_values, run_starts, run_lengths = find_runs(isnan_x)
+                
+                for nonnan_idx in np.where(run_values == False)[0]:
+                    start = run_starts[nonnan_idx].item()
+                    length = run_lengths[nonnan_idx].item()
+                    end = start + length - 1
+                    # get the average of x and y
+                    avg_x = np.mean(df.loc[start:end, (bpt, 'x')])
+                    avg_y = np.mean(df.loc[start:end, (bpt, 'y')])
+
+                    # change the original data frame
+                    df.loc[start:end, (bpt, 'x')] = avg_x
+                    df.loc[start:end, (bpt, 'y')] = avg_y
+
+                    # add a new row to the new dataframe
+                    new_row = (bpt, start, length, avg_x, avg_y)
+                    average_array.append(new_row)
+        # make a dataframe out of it
+        columns = ['bodypart', 'start', 'length', 'x_avg', 'y_avg']
+        average_df = pd.DataFrame(data=average_array, 
+                                  columns=columns)
+
+    else:
+        average_df = None
+    return df, average_df
+
+def select_N_locomotion_sequences(label : np.ndarray,
+                                  N : int,
+                                  locomotion_labels : list=LOCOMOTION_LABELS, 
+                                  length_limits : tuple=(None,None)):
+    """
+    From label, selects N locomotions sequences that match with locomotion_labels 
+    and are within the specified length_limits.
+
+    :param np.ndarray label: BSOID label for the DLC data. 
+    :param int N: The number of sequences we extract.
+    :param list locomotion_labels: Integer labels corresponding to locomotion groups, 
+    defaults to LOCOMOTION_LABEL (38, for YAC128 network).    
+    :param tuple length_limits: Lower & upper limits in length for locomotion
+    snippets to use to generate videos, defaults to no restriction.
+    
+    :return list starts: A list of start for the sequences. 
+    :return list ends: A list of end for the sequences. Same order as starts.
+    :return list lengths: A list of the lengths for the sequences. Same order as 
+    starts.
+    """
+    loc_starts, loc_lengths = find_locomotion_sequences(
+        label=label, locomotion_label=locomotion_labels, length_limits=length_limits
+        )
+    # generate videos for 'num_runs' locomotion bout
+    starts, ends, lengths = [], [], []
+    
+    N = min(N, len(loc_starts))
+    for i in range(N):
+        start, length = loc_starts[i], loc_lengths[i]
+        end = start + length - 1
+        starts.append(start); ends.append(end); lengths.append(length)
+    
+    return starts, ends, lengths
