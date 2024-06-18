@@ -362,7 +362,7 @@ def filter_nonpawrest_motion(df : pd.DataFrame,
     return df, average_df
 
 def select_N_locomotion_sequences(label : np.ndarray,
-                                  N : int,
+                                  N : int=float("inf"),
                                   locomotion_labels : list=LOCOMOTION_LABELS, 
                                   length_limits : tuple=(None,None)):
     """
@@ -370,7 +370,7 @@ def select_N_locomotion_sequences(label : np.ndarray,
     and are within the specified length_limits.
 
     :param np.ndarray label: BSOID label for the DLC data. 
-    :param int N: The number of sequences we extract.
+    :param int N: The number of sequences we extract. Defaults to all existing ones.
     :param list locomotion_labels: Integer labels corresponding to locomotion groups, 
     defaults to LOCOMOTION_LABEL (38, for YAC128 network).    
     :param tuple length_limits: Lower & upper limits in length for locomotion
