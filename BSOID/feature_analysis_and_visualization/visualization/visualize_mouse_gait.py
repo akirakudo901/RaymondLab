@@ -1,14 +1,17 @@
 # Author: Akira Kudo
 # Created: 2024/03/31
-# Last updated: 2024/06/17
+# Last updated: 2024/06/21
 
 import os
 
+from math import sqrt
+from matplotlib.axes import Axes
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import yaml
 
-from ..utils import find_runs, process_upper_and_lower_limit
+from ..utils import find_runs, get_mousename, process_upper_and_lower_limit
 
 LOCOMOTION_LABELS = [38]
 MOVEMENT_THRESHOLD = 0.75
@@ -232,6 +235,236 @@ def visualize_locomotion_stats(label : np.ndarray,
     if show_figure: plt.show()
     else: plt.close()
 
+def visualize_stepsize_in_locomotion_in_single_mouse(
+        stepsize_yaml : str,
+        title : str,
+        savedir : str,
+        savename : str,
+        show_figure : bool=True,
+        save_figure : bool=True
+        ):
+    """
+    Visualizes the histogram of step sizes in mice in locomotion, 
+    focusing one mouse at a time and rendering the results for each 
+    of right fore paw, left fore paw, right hind paw, left hind paw.
+
+    :param str stepsize_yaml: Path to yaml holding data for one mouse.
+    :param str title: Title of the rendered figure.
+    :param str savedir: Directory to which the figure would be saved.
+    :param str savename: File name of the figure to be saved.
+    :param bool show_figure: Whether to show the figure, defaults to True
+    :param bool save_figure: Whether to save the figure, defaults to True
+    """
+    POSITION = [[0,0], [0,1], [1,0], [1,1]]
+
+    _, axes = plt.subplots(2, 2, figsize=(10,5))
+
+    min_stepsize, max_stepsize = float("inf"), float("-inf")
+
+    for bpt, position in zip(
+        ['rightforepaw', 'leftforepaw', 'righthindpaw', 'lefthindpaw'], 
+        POSITION
+        ):
+        ax = axes[position[0], position[1]]
+        extrema = visualize_stepsize_in_locomotion(stepsize_yaml=stepsize_yaml,
+                                                   bodyparts=[bpt],
+                                                   title="", 
+                                                   ax=ax)
+        if len(extrema) != 0:
+            min_stepsize = min(min_stepsize, extrema[bpt]["min"])
+            max_stepsize = max(max_stepsize, extrema[bpt]["max"])
+    
+    for pos in POSITION:
+        ax = axes[pos[0], pos[1]]
+        ax.set_xlim(min_stepsize, max_stepsize)
+    
+    plt.suptitle(title)
+    plt.tight_layout()
+    
+    if save_figure:
+        plt.savefig(os.path.join(savedir, savename))
+    
+    if show_figure:
+        plt.show()
+    else:
+        plt.close()
+
+def visualize_stepsize_in_locomotion_in_multiple_mice(
+        yamls : list,
+        title : str,
+        savedir : str,
+        savename : str,
+        show_figure : bool=True,
+        save_figure : bool=True
+        ):
+    """
+    Visualizes the histogram of step sizes in mice in locomotion, 
+    focusing on multiple mice for the same body part. Each of right 
+    fore paw, left fore paw, right hind paw, left hind paw will be rendered
+    at once for all mice, in separate graphs on the same figure.
+
+    :param list yamls: A list of paths to yaml holding data for one mouse.
+    :param str title: Title of the rendered figure.
+    :param str savedir: Directory to which the figure would be saved.
+    :param str savename: File name of the figure to be saved.
+    :param bool show_figure: Whether to show the figure, defaults to True
+    :param bool save_figure: Whether to save the figure, defaults to True
+    """
+    # we arrange the mice into a grid closest to a square as possible
+    num_mouse = int(len(yamls))
+    num_rows  = int(sqrt(num_mouse) // 1)
+    num_cols  = int((num_mouse - 1) // num_rows + 1)
+
+    for bpt in ['rightforepaw', 'leftforepaw', 'righthindpaw', 'lefthindpaw']:
+        _, axes = plt.subplots(num_rows, num_cols, figsize=(15, 7))
+
+        min_stepsize, max_stepsize = float("inf"), float("-inf")
+
+        for mouse_idx, yaml in enumerate(yamls):
+            row_idx, col_idx = int(mouse_idx % num_rows), int(mouse_idx // num_rows)
+
+            ax = axes[row_idx, col_idx]
+            extrema = visualize_stepsize_in_locomotion(stepsize_yaml=yaml,
+                                                       bodyparts=[bpt],
+                                                       title=get_mousename(yaml), 
+                                                       ax=ax)
+            if len(extrema) != 0:
+                min_stepsize = min(min_stepsize, extrema[bpt]["min"])
+                max_stepsize = max(max_stepsize, extrema[bpt]["max"])
+    
+        for mouse_idx in range(num_mouse):
+            row_idx, col_idx = mouse_idx % num_rows, mouse_idx // num_rows
+            ax = axes[row_idx, col_idx]
+            ax.set_xlim(min_stepsize, max_stepsize)
+            if row_idx == (num_rows - 1):
+                ax.set_xlabel('Step Size (pixel)')
+            if col_idx == (num_cols - 1):
+                ax.set_ylabel('Frequency')
+        
+        plt.suptitle(f"{title} ({bpt})")
+        plt.tight_layout()
+    
+        if save_figure:
+            plt.savefig(os.path.join(savedir, f'{savename}_{bpt}'))
+        
+        if show_figure:
+            plt.show()
+        else:
+            plt.close()
+
+def visualize_stepsize_in_locomotion_in_mice_groups(
+        yamls_groups : list,
+        groupnames : list,
+        title : str,
+        savedir : str,
+        savename : str,
+        show_figure : bool=True,
+        save_figure : bool=True
+        ):
+    """
+    Visualizes the histogram of step sizes in mice in locomotion, 
+    focusing on multiple mice for the same body part. Each of right 
+    fore paw, left fore paw, right hind paw, left hind paw will be rendered
+    at once for all mice, where all step sizes are put together.
+
+    :param list yamls_groups: A list of 'list of paths' to yaml holding data for one mouse.
+    Each list is a group of yamls.
+    :param list groupnames: A list of the name of groups of yamls corresponding to 
+    each group given as 'yaml_groups'.
+    :param str title: Title of the rendered figure.
+    :param str savedir: Directory to which the figure would be saved.
+    :param str savename: File name of the figure to be saved.
+    :param bool show_figure: Whether to show the figure, defaults to True
+    :param bool save_figure: Whether to save the figure, defaults to True
+    """
+    # for each body part in question, we create a separate figure
+    for bpt in ['rightforepaw', 'leftforepaw', 'righthindpaw', 'lefthindpaw']:
+        _, axes = plt.subplots(1, len(groupnames))
+        min_stepsize, max_stepsize = float("inf"), float("-inf")
+
+        # for each mouse group
+        for group_idx, (yamls, groupname) in enumerate(zip(yamls_groups, groupnames)):
+            ax = axes if (len(groupnames) == 1) else axes[group_idx]
+
+            # create a yaml that merges all such yamls together
+            yaml_contents = [read_stepsize_yaml(yml) for yml in yamls]
+            merged_yaml = {}
+            
+            for yaml_idx, content in enumerate(yaml_contents):
+                for key, val in content.items():
+                    merged_yaml[f'{key}_{yaml_idx}'] = val
+                
+            extrema = visualize_stepsize_in_locomotion(stepsize_yaml=merged_yaml,
+                                                       bodyparts=[bpt],
+                                                       title=groupname, 
+                                                       ax=ax)
+            if len(extrema) != 0:
+                min_stepsize = min(min_stepsize, extrema[bpt]["min"])
+                max_stepsize = max(max_stepsize, extrema[bpt]["max"])
+            
+            ax.set_title(groupname)
+            ax.set_xlabel('Step Size (pixel)')
+            if group_idx == 0:
+                ax.set_ylabel('Frequency')
+        
+        for i in range(len(groupnames)):
+            ax = axes if (len(groupnames) == 1) else axes[i]
+            ax.set_xlim(min_stepsize, max_stepsize)
+                
+        plt.suptitle(title)
+        plt.tight_layout()
+    
+        if save_figure:
+            plt.savefig(os.path.join(savedir, f'{savename}_{bpt}'))
+        
+        if show_figure:
+            plt.show()
+        else:
+            plt.close()
+
+def visualize_stepsize_in_locomotion(stepsize_yaml, #str or dict,
+                                     bodyparts : list,
+                                     title : str,
+                                     ax : Axes=None):
+    CUTOFF = 7 # a cutoff for a stepsize that is considered the same position
+    extrema = {}
+
+    if type(stepsize_yaml) == dict:
+        content = stepsize_yaml
+    elif type(stepsize_yaml) == str:
+        content = read_stepsize_yaml(stepsize_yaml)
+
+    if ax is None:
+        plt.title(f"{title}")
+        plt.xlabel("Step Size (pixel)")
+        plt.ylabel("Frequency")
+        plt.show()
+    else:
+        ax.set_title(f"{title}")
+
+    # deal with the (rare) case where there is no locomotion entry
+    if len(content) == 0:
+        extrema = {}
+        return extrema
+
+    # for every body part except the "end" entry which isn't    
+    for bpt in [bpt for bpt in list(content.values())[0] 
+                if (bpt != 'end' and bpt in bodyparts)]:
+        all_stepsizes = []
+
+        for elem in content.values():
+            new_stepsize = [stepsize for stepsize in elem[bpt]['diff'] 
+                            if stepsize > CUTOFF]
+            all_stepsizes.extend(new_stepsize)
+        
+        # visualize the result into a histogram
+        if ax is None:
+            plt.hist(all_stepsizes)
+        else:
+            ax.hist(all_stepsizes)
+    
+        extrema[bpt] = {"min" : min(all_stepsizes), "max" : max(all_stepsizes)}
+    return extrema
 
 # HELPER
 
@@ -394,3 +627,18 @@ def select_N_locomotion_sequences(label : np.ndarray,
         starts.append(start); ends.append(end); lengths.append(length)
     
     return starts, ends, lengths
+
+def read_stepsize_yaml(stepsize_yaml : str):
+    """
+    Read a yaml file holding "step size" information
+    for locomotion.
+
+    :param str stepsize_yaml: Path to a yaml holding step size info.
+    :return Dict: A dictionary holding data for step size. Keys are the
+    starting frame number, with entries: 
+    [end, rightforepaw, leftforepaw, righthindpaw, lefthindpaw].
+    """
+    with open(stepsize_yaml, 'r') as f:
+        yaml_content = f.read()
+    content = yaml.safe_load(yaml_content)
+    return content
