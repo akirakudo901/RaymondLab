@@ -1,6 +1,6 @@
 # Author: Akira Kudo
 # Created: 2024/03/31
-# Last updated: 2024/06/21
+# Last updated: 2024/06/24
 
 import os
 
@@ -310,6 +310,8 @@ def visualize_stepsize_in_locomotion_in_multiple_mice(
     :param bool show_figure: Whether to show the figure, defaults to True
     :param bool save_figure: Whether to save the figure, defaults to True
     """
+    if len(yamls) == 0:
+        return 
     # we arrange the mice into a grid closest to a square as possible
     num_mouse = int(len(yamls))
     num_rows  = int(sqrt(num_mouse) // 1)
@@ -379,7 +381,7 @@ def visualize_stepsize_in_locomotion_in_mice_groups(
     """
     # for each body part in question, we create a separate figure
     for bpt in ['rightforepaw', 'leftforepaw', 'righthindpaw', 'lefthindpaw']:
-        _, axes = plt.subplots(1, len(groupnames))
+        _, axes = plt.subplots(len(groupnames), 1)
         min_stepsize, max_stepsize = float("inf"), float("-inf")
 
         # for each mouse group
