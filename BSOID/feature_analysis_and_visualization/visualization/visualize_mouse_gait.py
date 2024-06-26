@@ -1,6 +1,6 @@
 # Author: Akira Kudo
 # Created: 2024/03/31
-# Last updated: 2024/06/24
+# Last updated: 2024/06/26
 
 import os
 
@@ -15,6 +15,7 @@ from ..utils import find_runs, get_mousename, process_upper_and_lower_limit
 
 LOCOMOTION_LABELS = [38]
 MOVEMENT_THRESHOLD = 0.75
+STEPSIZE_MIN = 7 # a cutoff for a stepsize that is considered the same position
 
 # column names for an averaged paw movement data frame
 COL_BODYPART = 'bodypart'
@@ -240,6 +241,7 @@ def visualize_stepsize_in_locomotion_in_single_mouse(
         title : str,
         savedir : str,
         savename : str,
+        binsize : int=None,
         show_figure : bool=True,
         save_figure : bool=True
         ):
@@ -252,6 +254,8 @@ def visualize_stepsize_in_locomotion_in_single_mouse(
     :param str title: Title of the rendered figure.
     :param str savedir: Directory to which the figure would be saved.
     :param str savename: File name of the figure to be saved.
+    :param int binsize: Integer indicating bin size shared among histograms. 
+    Defaults to not being specified.
     :param bool show_figure: Whether to show the figure, defaults to True
     :param bool save_figure: Whether to save the figure, defaults to True
     """
@@ -269,14 +273,16 @@ def visualize_stepsize_in_locomotion_in_single_mouse(
         extrema = visualize_stepsize_in_locomotion(stepsize_yaml=stepsize_yaml,
                                                    bodyparts=[bpt],
                                                    title="", 
+                                                   binsize=binsize,
                                                    ax=ax)
         if len(extrema) != 0:
             min_stepsize = min(min_stepsize, extrema[bpt]["min"])
             max_stepsize = max(max_stepsize, extrema[bpt]["max"])
     
-    for pos in POSITION:
-        ax = axes[pos[0], pos[1]]
-        ax.set_xlim(min_stepsize, max_stepsize)
+    if len(extrema) != 0:
+        for pos in POSITION:
+            ax = axes[pos[0], pos[1]]
+            ax.set_xlim(min_stepsize, max_stepsize)
     
     plt.suptitle(title)
     plt.tight_layout()
@@ -294,6 +300,7 @@ def visualize_stepsize_in_locomotion_in_multiple_mice(
         title : str,
         savedir : str,
         savename : str,
+        binsize : int=None,
         show_figure : bool=True,
         save_figure : bool=True
         ):
@@ -307,6 +314,8 @@ def visualize_stepsize_in_locomotion_in_multiple_mice(
     :param str title: Title of the rendered figure.
     :param str savedir: Directory to which the figure would be saved.
     :param str savename: File name of the figure to be saved.
+    :param int binsize: Integer indicating bin size shared among histograms. 
+    Defaults to not being specified.
     :param bool show_figure: Whether to show the figure, defaults to True
     :param bool save_figure: Whether to save the figure, defaults to True
     """
@@ -329,6 +338,7 @@ def visualize_stepsize_in_locomotion_in_multiple_mice(
             extrema = visualize_stepsize_in_locomotion(stepsize_yaml=yaml,
                                                        bodyparts=[bpt],
                                                        title=get_mousename(yaml), 
+                                                       binsize=binsize,
                                                        ax=ax)
             if len(extrema) != 0:
                 min_stepsize = min(min_stepsize, extrema[bpt]["min"])
@@ -360,6 +370,7 @@ def visualize_stepsize_in_locomotion_in_mice_groups(
         title : str,
         savedir : str,
         savename : str,
+        binsize : int=None,
         show_figure : bool=True,
         save_figure : bool=True
         ):
@@ -376,11 +387,16 @@ def visualize_stepsize_in_locomotion_in_mice_groups(
     :param str title: Title of the rendered figure.
     :param str savedir: Directory to which the figure would be saved.
     :param str savename: File name of the figure to be saved.
+    :param int binsize: Integer indicating bin size shared among histograms. 
+    Defaults to not being specified.
     :param bool show_figure: Whether to show the figure, defaults to True
     :param bool save_figure: Whether to save the figure, defaults to True
     """
     # for each body part in question, we create a separate figure
-    for bpt in ['rightforepaw', 'leftforepaw', 'righthindpaw', 'lefthindpaw']:
+    for bpt, bpt_title in zip(
+        ['rightforepaw',   'leftforepaw',   'righthindpaw',   'lefthindpaw'  ], 
+        ['Right Fore Paw', 'Left Fore Paw', 'Right Hind Paw', 'Left Hind Paw']
+        ):
         _, axes = plt.subplots(len(groupnames), 1)
         min_stepsize, max_stepsize = float("inf"), float("-inf")
 
@@ -399,6 +415,7 @@ def visualize_stepsize_in_locomotion_in_mice_groups(
             extrema = visualize_stepsize_in_locomotion(stepsize_yaml=merged_yaml,
                                                        bodyparts=[bpt],
                                                        title=groupname, 
+                                                       binsize=binsize,
                                                        ax=ax)
             if len(extrema) != 0:
                 min_stepsize = min(min_stepsize, extrema[bpt]["min"])
@@ -413,7 +430,7 @@ def visualize_stepsize_in_locomotion_in_mice_groups(
             ax = axes if (len(groupnames) == 1) else axes[i]
             ax.set_xlim(min_stepsize, max_stepsize)
                 
-        plt.suptitle(title)
+        plt.suptitle(f"{title} - {bpt_title}")
         plt.tight_layout()
     
         if save_figure:
@@ -427,8 +444,8 @@ def visualize_stepsize_in_locomotion_in_mice_groups(
 def visualize_stepsize_in_locomotion(stepsize_yaml, #str or dict,
                                      bodyparts : list,
                                      title : str,
+                                     binsize : int=None,
                                      ax : Axes=None):
-    CUTOFF = 7 # a cutoff for a stepsize that is considered the same position
     extrema = {}
 
     if type(stepsize_yaml) == dict:
@@ -460,10 +477,11 @@ def visualize_stepsize_in_locomotion(stepsize_yaml, #str or dict,
             all_stepsizes.extend(new_stepsize)
         
         # visualize the result into a histogram
+        bins = range(0, (int(max(all_stepsizes)) // binsize + 1) * binsize, binsize)
         if ax is None:
-            plt.hist(all_stepsizes)
+            plt.hist(all_stepsizes, bins=bins)
         else:
-            ax.hist(all_stepsizes)
+            ax.hist(all_stepsizes, bins=bins)
     
         extrema[bpt] = {"min" : min(all_stepsizes), "max" : max(all_stepsizes)}
     return extrema
