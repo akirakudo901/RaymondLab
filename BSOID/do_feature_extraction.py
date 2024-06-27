@@ -1,6 +1,6 @@
 # Author: Akira Kudo
 # Created: 2024/03/19
-# Last Updated: 2024/05/16
+# Last Updated: 2024/06/20
 
 import os
 from typing import List
@@ -244,8 +244,8 @@ if __name__ == "__main__":
         _, remaining_path = os.path.splitdrive(path)
         return os.path.join(current_drive, remaining_path)
 
-    CLFPATH = r"Z:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\BSOID\YAC128\Feb232023\output\Feb-23-2023_randomforest.sav"
-    # CLFPATH = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\BSOID\Q175\Apr082024\output\Apr-08-2024_randomforest.sav"
+    # CLFPATH = r"Z:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\BSOID\YAC128\Feb232023\output\Feb-23-2023_randomforest.sav"
+    CLFPATH = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\BSOID\Q175\Apr082024\output\Apr-08-2024_randomforest.sav"
 
     SAVEPATH = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\BSOID\results\feats_labels"
 
@@ -282,11 +282,12 @@ if __name__ == "__main__":
             pose=POSE
         )
 
-    ROOT = r"Z:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\DLC\YAC128\csvs\allcsv_2024_05_16_Akira"
-    # ROOT = r"Z:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\DLC\Q175\csv\allcsv_2024_05_16_Akira"
-    TARGET = r"Z:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\BSOID\YAC128\labeled_features"
-    # TARGET = r"Z:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\BSOID\Q175\labeled_features"
+    ROOT   = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\DLC\Q175\csv\allcsv_2024_06_20_Akira"
+    TARGET = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\BSOID\Q175\labeled_features"
 
+    ROOT = convert_to_current_file_drive(ROOT)
+    TARGET = convert_to_current_file_drive(TARGET)
+    
     if True:
         # given a folder holding csvs into a set directory structure, copy
         # over any corresponding labeled feature into another directory

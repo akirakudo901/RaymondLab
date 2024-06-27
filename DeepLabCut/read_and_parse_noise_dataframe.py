@@ -1,6 +1,6 @@
 # Author: Akira Kudo
 # Created: 2024/04/11
-# Last Updated: 2024/04/16
+# Last Updated: 2024/04/24
 
 import os
 import re
@@ -8,16 +8,8 @@ import re
 import numpy as np
 import pandas as pd
 
-from visualization.visualize_speed_of_bodypart import visualize_speed_of_bodypart_from_csv, visualize_angle_of_bodypart_from_csv, visualize_property_of_bodypart_from_csv
-
-CSV_FOLDER = r"C:\Users\mashi\Desktop\temp\Q175\csvs"
-# r"Z:\Raymond Lab\2 Colour D1 D2 Photometry Project\B-SOID\Q175 Open Field CSVs\WT\snapshot2060000"
-CSV_FILENAME = "20220228223808_320151_m1_openfieldDLC_resnet50_Q175-D2Cre Open Field Males BrownJan12shuffle1_2060000.csv"
-CSV_PATH = os.path.join(CSV_FOLDER, CSV_FILENAME)
-
-START, END = 100, 400
-
-NOISE_CSV = r"C:\Users\mashi\Desktop\RaymondLab\Experiments\Openfield\3part2 BsoidAnalysis\tkteach\ds\labeled_extracted_storage.csv"
+from visualization.visualize_speed_of_bodypart import visualize_angle_of_bodypart_from_csv, visualize_likelihood_of_bodypart_from_csv, visualize_property_of_bodypart_from_csv, visualize_speed_of_bodypart_from_csv
+from temper_with_csv_and_hdf.data_filtering.identify_paw_noise import identify_bodypart_noise_by_impossible_speed
 
 NOISE_NUMBER_TO_BODYPART_MAP = {
     0 : 'snout',
@@ -89,47 +81,91 @@ def sanity_check_read_and_parse_noise_dataframe():
         # while comparing values
         assert np.array_equal(noise_map[k], expected_map[k])
 
-bodyparts2noise = read_and_parse_noise_dataframe(NOISE_CSV, start=START, end=END)
+if __name__ == "__main__":
+    CSV_FOLDER = r"C:\Users\mashi\Desktop\temp\Q175\csvs"
+    # r"Z:\Raymond Lab\2 Colour D1 D2 Photometry Project\B-SOID\Q175 Open Field CSVs\WT\snapshot2060000"
+    CSV_FILENAME = "20220228223808_320151_m1_openfieldDLC_resnet50_Q175-D2Cre Open Field Males BrownJan12shuffle1_2060000.csv"
+    CSV_PATH = os.path.join(CSV_FOLDER, CSV_FILENAME)
 
-# finally visualize the result
-# visualize_speed_of_bodypart_from_csv(
-#     csv_path=CSV_PATH, 
-#     bodyparts=[
-#         'snout',
-#         'rightforepaw', 'leftforepaw',
-#         # 'righthindpaw', 
-#         # 'lefthindpaw',
-#         # 'tailbase', 'belly'
-#         ],
-#     start=START, end=END,
-#     bodyparts2noise=bodyparts2noise
-# )
+    START, END = 100, 400
 
-# visualize_angle_of_bodypart_from_csv(
-#     csv_path=CSV_PATH, 
-#     bodyparts=[
-#         'snout',
-#         'rightforepaw', 'leftforepaw',
-#         # 'righthindpaw', 
-#         # 'lefthindpaw',
-#         # 'tailbase', 
-#         # 'belly'
-#         ],
-#     start=START, end=END,
-#     bodyparts2noise=bodyparts2noise
-# )
+    NOISE_CSV = r"C:\Users\mashi\Desktop\RaymondLab\Experiments\Openfield\3part2 BsoidAnalysis\tkteach\ds\labeled_extracted_storage.csv"
 
-visualize_property_of_bodypart_from_csv(
-    csv_path=CSV_PATH, 
-    bodyparts=[
-        # 'snout',
-        'rightforepaw', 'leftforepaw',
-        # 'righthindpaw', 
-        # 'lefthindpaw',
-        # 'tailbase', 
-        # 'belly'
-        ], 
-    flag=5, 
-    start=START, end=END,
-    bodyparts2noise=bodyparts2noise
-)
+    bodyparts2noise = read_and_parse_noise_dataframe(NOISE_CSV, start=START, end=END)
+
+    # finally visualize the result
+    # visualize_speed_of_bodypart_from_csv(
+    #     csv_path=CSV_PATH, 
+    #     bodyparts=[
+    #         'snout',
+    #         'rightforepaw', 'leftforepaw',
+    #         # 'righthindpaw', 
+    #         # 'lefthindpaw',
+    #         # 'tailbase', 'belly'
+    #         ],
+    #     start=START, end=END,
+    #     bodyparts2noise=bodyparts2noise
+    # )
+
+    # visualize_angle_of_bodypart_from_csv(
+    #     csv_path=CSV_PATH, 
+    #     bodyparts=[
+    #         'snout',
+    #         'rightforepaw', 'leftforepaw',
+    #         # 'righthindpaw', 
+    #         # 'lefthindpaw',
+    #         # 'tailbase', 
+    #         # 'belly'
+    #         ],
+    #     start=START, end=END,
+    #     bodyparts2noise=bodyparts2noise
+    # )
+
+    BODYPARTS = [
+            'snout',
+            'rightforepaw', 'leftforepaw',
+            'righthindpaw', 
+            'lefthindpaw',
+            'tailbase', 
+            'belly'
+            ]
+
+    # visualize_property_of_bodypart_from_csv(
+    #     csv_path=CSV_PATH, 
+    #     bodyparts=BODYPARTS, 
+    #     flag=25, 
+    #     start=START, end=END,
+    #     bodyparts2noise=bodyparts2noise
+    # )
+
+    visualize_likelihood_of_bodypart_from_csv(
+        csv_path=CSV_PATH, 
+        bodyparts=BODYPARTS, 
+        start=START, end=END,
+        bodyparts2noise=bodyparts2noise
+        )
+
+    # also calcualte bodyparts2noise from impossible speed & location
+    impossible_move_df = identify_bodypart_noise_by_impossible_speed(
+        dlc_csv_path=CSV_PATH, bodyparts=BODYPARTS, start=START, end=END
+    )
+
+    bodyparts2noise_from_impossible_speed = dict(
+        [( bpt, impossible_move_df[(bpt, "loc_wrng")].to_numpy() ) 
+         for bpt in BODYPARTS]
+    )
+
+    # visualize_property_of_bodypart_from_csv(
+    #     csv_path=CSV_PATH, 
+    #     bodyparts=BODYPARTS, 
+    #     flag=25, 
+    #     start=START, end=END,
+    #     bodyparts2noise=bodyparts2noise_from_impossible_speed
+    # )
+
+    visualize_likelihood_of_bodypart_from_csv(
+        csv_path=CSV_PATH, 
+        bodyparts=BODYPARTS, 
+        start=START, end=END,
+        bodyparts2noise=bodyparts2noise_from_impossible_speed
+        )

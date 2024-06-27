@@ -1,6 +1,6 @@
 # Author: Akira Kudo
 # Created: 2024/06/03
-# Last Updated: 2024/06/04
+# Last Updated: 2024/06/13
 
 import os
 
@@ -120,20 +120,21 @@ if __name__ == "__main__":
         "YAC128"
         ]:
         
-        SAVE_DIR = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\DLC\{}\fig\qq".format(mousetype)
-        SAVE_DIR = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\DLC\{}\fig\qq_NoWeirdMice".format(mousetype)
+        # SAVE_DIR = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\DLC\{}\fig\qq{}".format(
+        #     mousetype, "AllMice")
+        SAVE_DIR = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\DLC\{}\fig\qq{}".format(
+            mousetype, "No535m1_153m2")
 
         if not os.path.exists(SAVE_DIR):
             os.mkdir(SAVE_DIR)
 
         CSV_FOLDER = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\RaymondLab\OpenField\3part1 MatlabAndPrismAnalysis\MATLAB\openfield_photometry_30min_DLC\data\results"
         CSV_PATHS = [
-            # os.path.join(CSV_FOLDER, "WithCenterTimeOverTime_{}_analysis_data_filt.csv".format(mousetype)),
-            # os.path.join(CSV_FOLDER, "WithCenterTimeOverTime_{}_analysis_data_unfilt.csv".format(mousetype))
-            # os.path.join(CSV_FOLDER, r"without_349412m5\No349412m5_WithCenterTimeOverTime_YAC128_analysis_data_filt.csv"),
-            # os.path.join(CSV_FOLDER, r"without_349412m5\No349412m5_WithCenterTimeOverTime_YAC128_analysis_data_unfilt.csv"),
-            os.path.join(CSV_FOLDER, r"without_weird_YACs\NoWeirdMice_WithCenterTimeOverTime_YAC128_analysis_data_filt.csv"),
-            os.path.join(CSV_FOLDER, r"without_weird_YACs\NoWeirdMice_WithCenterTimeOverTime_YAC128_analysis_data_unfilt.csv"),
+            # os.path.join(CSV_FOLDER, r"AllMice\YAC128_analysis_data_filt.csv"),
+            # os.path.join(CSV_FOLDER, r"AllMice\YAC128_analysis_data_unfilt.csv"),
+
+            os.path.join(CSV_FOLDER, r"OutlierRemoved\NoOutlier_YAC128_analysis_data_filt.csv"),
+            os.path.join(CSV_FOLDER, r"OutlierRemoved\NoOutlier_YAC128_analysis_data_unfilt.csv"),
         ]
 
         renaming_columns = {

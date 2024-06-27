@@ -2,16 +2,17 @@
 # Created: 2024/05/10
 # Last Updated: 2024/06/18
 
+import os
+import sys
+
 import numpy as np
 import pandas as pd
-
-import sys
 
 # I will learn about proper packaging and arrangement later...
 sys.path.append(r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\RaymondLab\BSOID")
 sys.path.append(r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\RaymondLab\DeepLabCut")
 
-from BSOID.bsoid_io.utils import read_BSOID_labeled_csv
+from BSOID.bsoid_io.utils import read_BSOID_labeled_csv, read_BSOID_labeled_features
 from BSOID.feature_analysis_and_visualization.visualization.visualize_mouse_gait import filter_nonpawrest_motion, select_N_locomotion_sequences
 from BSOID.label_behavior_bits.preprocessing import filter_bouts_smaller_than_N_frames
 
@@ -27,8 +28,8 @@ from DeepLabCut.utils_to_be_replaced_oneday import get_mousename
 # 3) Render the whole as video.
 
 MOVEMENT_THRESHOLD = 0.5
-LOCOMOTION_LABEL = [38]
 FPS = 40
+LOCOMOTION_LABEL = [29,30]
 
 def make_locomotion_paper_ink_video_from_dataframe_and_label(
         video_path : str,
@@ -108,37 +109,20 @@ def make_locomotion_paper_ink_video_from_dataframe_and_label(
             trailpoints=length+1
         )
 
-if __name__ == "__main__":
-    VIDEO_PATH = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\DLC\Q175\videos\\" + \
-        "20220228223808_320151_m1_openfield.mp4"
-    VIDEO_PATH2 = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\DLC\YAC128\videos\\" + \
-        "20220213051553_326787_m2.mp4"
+def main(video_path : str,
+        dlc_path : str,
+        label_path : str,
+        img_dir : str,
+        output_dir : str,
+        show_nonpaw : bool=False,
+        length_limits : tuple=(None, None),
+        num_runs : int=5,
+        filter_size : int=5,
+        threshold : float=MOVEMENT_THRESHOLD,
+        locomotion_labels : list=LOCOMOTION_LABEL, 
+        fps : int=FPS,
+        average_pawrest : bool=True):
     
-    BSOID_CSV_PATH = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\BSOID\Q175\Apr082024\CSV files\BSOID\\" + \
-        "Apr-08-2024labels_pose_40Hz20220228223808_320151_m1_openfieldDLC_resnet50_Q175-D2Cre Open Field Males BrownJan12shuffle1_1030000_filtered.csv"
-    
-    DLC_CSV_PATH2 = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\DLC\YAC128\csvs\csv_1stTermPres\mix-it1-1030k-it3-2100k\WT_unfilt\\" + \
-        "20220213051553_326787_m2DLC_resnet50_WhiteMice_OpenfieldJan19shuffle1_1030000.csv"
-    BSOID_LABEL_PATH2 = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\BSOID\feats_labels\\" + \
-        "Feb-23-2023_20220213051553_326787_m2DLC_resnet50_WhiteMice_OpenfieldJan19shuffle1_1030000_labels.npy"
-
-    IMG_DIR = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\DLC\Q175\videos\extracted"
-    IMG_DIR2 = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\DLC\YAC128\videos\extracted"
-    OUTPUT_DIR = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\DLC\Q175\videos\generated"
-    OUTPUT_DIR2 = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\DLC\YAC128\videos\generated"
-
-    NUM_RUNS = float("inf")
-    FPS = 10
-
-    BODYPARTS = [
-        "snout", 
-        "rightforepaw", "leftforepaw",
-        "righthindpaw", "lefthindpaw",
-        "tailbase", "belly"
-    ]
-
-    LEN_LIMS = (60, None)
-
     def filter_label_and_dataframe(label : np.ndarray, 
                                    df : pd.DataFrame):
         # then filter paw noises based on impossible speed
@@ -161,46 +145,175 @@ if __name__ == "__main__":
         
         return filt_label, filt_df
     
-    # for video 1 - Q175
-    if True:
+    # read csvs
+    label, _ = read_BSOID_labeled_features(csv_path=label_path)
+    df = read_dlc_csv_file(dlc_path=dlc_path, include_scorer=False)
+
+    # TRUNCATE THE DLC DATA
+    if len(label) < df.shape[0]:
+        print(f"Label ({len(label)} long) is shorter than the DLC data ({df.shape[0]} long) " + 
+            ", but we know the DLC data should match the labels at the beginning.")
+        print("We will hence truncate the DLC data!")
+        df = df.loc[:len(label)-1, :]
+
+    filt_lbl, filt_df = filter_label_and_dataframe(label, df)
+
+    make_locomotion_paper_ink_video_from_dataframe_and_label(
+        video_path=video_path,
+        df=filt_df,
+        label=filt_lbl,
+        img_dir=img_dir, output_dir=output_dir, num_runs=num_runs,
+        filter_size=filter_size,
+        threshold=threshold,
+        locomotion_labels=locomotion_labels, 
+        fps=fps,
+        length_limits=length_limits,
+        show_nonpaw=show_nonpaw,
+        average_pawrest=average_pawrest
+        )
+
+if __name__ == "__main__":
+    NUM_RUNS = float("inf")
+    FPS = 10
+
+    BODYPARTS = [
+        "snout", 
+        "rightforepaw", "leftforepaw",
+        "righthindpaw", "lefthindpaw",
+        "tailbase", "belly"
+    ]
+
+    LEN_LIMS = (60, None)
+
+    def find_corresponding_video(video_folder : str, mousename : str):
+        # standardize format
+        mousename = get_mousename(mousename)
+
+        for file in os.listdir(video_folder):
+            if not file.endswith(".mp4"): continue
+            video_mouse = get_mousename(file)
+            if video_mouse == mousename:
+                return os.path.join(video_folder, file)
+        raise Exception(f"Video for {mousename} not found in: {video_folder}...")
+    
+    # for Q175
+    if True:        
+        IMG_DIR = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\DLC\Q175\videos\extracted"
+        OUTPUT_DIR = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\DLC\Q175\videos\generated\pawInk"
+
+        ABOVE_LABEL_CSVS = [
+            r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\BSOID\Q175\labeled_features\allcsv_2024_06_20_Akira\HD_filt",
+            r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\BSOID\Q175\labeled_features\allcsv_2024_06_20_Akira\WT_filt"
+        ]
+        LABEL_CSVS_PATHS = []; [LABEL_CSVS_PATHS.extend([os.path.join(csv_folder, file) 
+                                             for file in os.listdir(csv_folder) if file.endswith('.csv')]) 
+                          for csv_folder in ABOVE_LABEL_CSVS]
+        
+        ABOVE_DLC_CSVS = [
+            r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\DLC\Q175\csv\allcsv_2024_06_20_Akira\HD_filt",
+            r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\DLC\Q175\csv\allcsv_2024_06_20_Akira\WT_filt"
+        ]
+        LABEL_DLC_PATHS = []; [LABEL_DLC_PATHS.extend([os.path.join(csv_folder, file)
+                                             for file in os.listdir(csv_folder) if file.endswith('.csv')]) 
+                          for csv_folder in ABOVE_DLC_CSVS]
+        
         LOCOMOTION_LABEL = [29,30]
+
+        ABOVE_VIDEOS = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\DLC\Q175\videos"
+        ABOVE_VIDEOS2 = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\DLC\Q175\videos\blackmice"
         
-        label, df = read_BSOID_labeled_csv(BSOID_CSV_PATH)
-        filt_lbl, filt_df = filter_label_and_dataframe(label, df)
+        for lbl, dlc in zip(LABEL_CSVS_PATHS, LABEL_DLC_PATHS):
+            # check that the two files point the same mouse
+            if get_mousename(lbl) != get_mousename(dlc):
+                raise Exception("Provided pair of label & dlc csvs aren't for the same mouse: \n" + 
+                                f" - {os.path.basename(lbl)} \n" + 
+                                f" - {os.path.basename(dlc)} \n")
+            # find the corresponding video
+            mousename = get_mousename(lbl)
+            try:
+                video_path = find_corresponding_video(video_folder=ABOVE_VIDEOS, mousename=mousename)
+            except:
+                video_path = find_corresponding_video(video_folder=ABOVE_VIDEOS2, mousename=mousename)
+            
+            print(f"Analyzing mouse: {mousename}:")
+            print(f"- {os.path.basename(lbl)}")
+            print(f"- {os.path.basename(dlc)}")
+            print(f"- {os.path.basename(video_path)}")
+
+            # setup outputdir based on the mouse of interest
+            outputdir = os.path.join(OUTPUT_DIR, mousename)
+
+            if not os.path.exists(outputdir):
+                os.mkdir(outputdir)
         
-        make_locomotion_paper_ink_video_from_dataframe_and_label(
-            video_path=VIDEO_PATH,
-            df=filt_df,
-            label=filt_lbl,
-            img_dir=IMG_DIR, output_dir=OUTPUT_DIR, num_runs=NUM_RUNS,
-            filter_size=5,
-            threshold=MOVEMENT_THRESHOLD,
-            locomotion_labels=LOCOMOTION_LABEL, 
-            fps=FPS,
-            length_limits=LEN_LIMS,
-            show_nonpaw=False,
-            average_pawrest=True
-            )
+            main(video_path=video_path,
+                dlc_path=dlc,
+                label_path=lbl,
+                img_dir=IMG_DIR, output_dir=outputdir, num_runs=NUM_RUNS,
+                filter_size=5,
+                threshold=MOVEMENT_THRESHOLD,
+                locomotion_labels=LOCOMOTION_LABEL, 
+                fps=FPS,
+                length_limits=LEN_LIMS,
+                show_nonpaw=False,
+                average_pawrest=True
+                )
     
     # for video 2 - YAC128
-    if False:
-        LOCOMOTION_LABEL = [38]
+    if True:
+        IMG_DIR = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\DLC\YAC128\videos\extracted"
+        OUTPUT_DIR = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\DLC\YAC128\videos\generated\pawInk"
 
-        movement_threshold = 0.5
-
-        label, df = np.load(BSOID_LABEL_PATH2), read_dlc_csv_file(dlc_path=DLC_CSV_PATH2)
-        label = np.insert(label, 0, [label[0].item()] * 3)
-        filt_lbl, filt_df = filter_label_and_dataframe(label, df)
+        ABOVE_LABEL_CSVS = [
+            r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\BSOID\YAC128\labeled_features\allcsv_2024_05_16_Akira\HD_filt", 
+            r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\BSOID\YAC128\labeled_features\allcsv_2024_05_16_Akira\WT_filt"
+        ]
+        LABEL_CSVS_PATHS = []; [LABEL_CSVS_PATHS.extend([os.path.join(csv_folder, file) 
+                                             for file in os.listdir(csv_folder) if file.endswith('.csv')]) 
+                          for csv_folder in ABOVE_LABEL_CSVS]
         
-        make_locomotion_paper_ink_video_from_dataframe_and_label(
-            video_path=VIDEO_PATH2,
-            df=filt_df,
-            label=filt_lbl,
-            img_dir=IMG_DIR2, output_dir=OUTPUT_DIR2, num_runs=NUM_RUNS,
-            filter_size=5,
-            threshold=movement_threshold,
-            locomotion_labels=LOCOMOTION_LABEL, 
-            fps=FPS,
-            length_limits=LEN_LIMS,
-            show_nonpaw=False
-            )
+        ABOVE_DLC_CSVS = [
+            r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\DLC\YAC128\csv\allcsv_2024_05_16_Akira\filt\HD_filt",
+            r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\DLC\YAC128\csv\allcsv_2024_05_16_Akira\filt\WT_filt"
+        ]
+        LABEL_DLC_PATHS = []; [LABEL_DLC_PATHS.extend([os.path.join(csv_folder, file)
+                                             for file in os.listdir(csv_folder) if file.endswith('.csv')]) 
+                          for csv_folder in ABOVE_DLC_CSVS]
+        
+        ABOVE_VIDEOS = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\DLC\YAC128\videos"
+
+        LOCOMOTION_LABEL = [38]
+        
+        for lbl, dlc in zip(LABEL_CSVS_PATHS, LABEL_DLC_PATHS):
+            # check that the two files point the same mouse
+            if get_mousename(lbl) != get_mousename(dlc):
+                raise Exception("Provided pair of label & dlc csvs aren't for the same mouse: \n" + 
+                                f" - {os.path.basename(lbl)} \n" + 
+                                f" - {os.path.basename(dlc)} \n")
+            # find the corresponding video
+            mousename = get_mousename(lbl)
+            video_path = find_corresponding_video(video_folder=ABOVE_VIDEOS, mousename=mousename)
+            
+            print(f"Analyzing mouse: {mousename}:")
+            print(f"- {os.path.basename(lbl)}")
+            print(f"- {os.path.basename(dlc)}")
+            print(f"- {os.path.basename(video_path)}")
+
+            # setup outputdir based on the mouse of interest
+            outputdir = os.path.join(OUTPUT_DIR, mousename)
+
+            if not os.path.exists(outputdir):
+                os.mkdir(outputdir)
+        
+            main(video_path=video_path,
+                dlc_path=dlc,
+                label_path=lbl,
+                img_dir=IMG_DIR, output_dir=outputdir, num_runs=NUM_RUNS,
+                filter_size=5,
+                threshold=MOVEMENT_THRESHOLD,
+                locomotion_labels=LOCOMOTION_LABEL, 
+                fps=FPS,
+                length_limits=LEN_LIMS,
+                show_nonpaw=False,
+                average_pawrest=True
+                )

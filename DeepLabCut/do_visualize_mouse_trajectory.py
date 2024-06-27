@@ -1,6 +1,6 @@
 # Author: Akira Kudo
 # Created: 2024/05/17
-# Last Updated: 2024/05/31
+# Last Updated: 2024/06/26
 
 import os
 
@@ -93,9 +93,14 @@ if __name__ == "__main__":
     END = 30*60*40 # number of frames for the 30 minutes - as the last couple minutes 
     # could include the mouse being removed from the open field, hence having weird tracking
 
-    BODYPARTS = ['belly']
+    BODYPARTS = ['snout', 'tailbase', 'belly']
 
-    for folder in [TOFILL_CSV_DIR.format("Q175"), TOFILL_CSV_DIR.format("YAC128")]:
+    for folder in [
+        # TOFILL_CSV_DIR.format("Q175"), 
+        # TOFILL_CSV_DIR.format("YAC128"),
+        # r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\DLC\Q175\csv\black\it0-2000k"
+        r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\DLC\Q175\csv\allcsv_2024_06_20_Akira"
+        ]:
         walk_and_generate_mouse_trajectories(walk_root=folder,
                                             save_foldername=MOUSE_TRAJ_FOLDERNAME,
                                             start=0, end=END,

@@ -1,6 +1,6 @@
 # Author: Akira Kudo
 # Created: 2024/05/16
-# Last Updated: 2024/05/16
+# Last Updated: 2024/05/28
 
 import os
 
@@ -107,3 +107,29 @@ def analyze_and_create_video(config : str,
     except Exception as e:
         print(e)
         send_slack_message(message="Video generation unsuccessful...")
+
+if __name__ == "__main__":
+    CONFIG = os.path.join(r"/media/Data/Raymond Lab/YAC128-D2Cre Open Field/WhiteMice_Openfield-Ellen-2023-01-19",
+                          # r"/media/Data/Raymond Lab/Q175-D2Cre Open Field Males/Q175-D2Cre Open Field Males Brown-Judy-2024-01-12",
+                           "config.yaml")
+    VIDEO_FOLDER = "/media/Data/Raymond Lab/YAC128 Mice Video Temp Akira Kudo"
+    ANALYZED_VIDEOS = [os.path.join(VIDEO_FOLDER, file) for file in os.listdir(VIDEO_FOLDER)]
+    RENDERED_VIDEOS = ANALYZED_VIDEOS
+
+    SHUFFLE = 1
+    FILTERED = False
+
+    analyze_and_create_video(config=CONFIG,
+                             analyzed_videos=ANALYZED_VIDEOS,
+                             rendered_videos=RENDERED_VIDEOS,
+                             shuffle=SHUFFLE,
+                             filtered=FILTERED,
+                             save_frames=False,
+                             videotype="mp4",
+                             destfolder=None, 
+                             batchsize=8,
+                             keypoints_only=False,
+                             displayedbodyparts="all",
+                             outputframerate=None,
+                             draw_skeleton=False,
+                             trailpoints=0)

@@ -473,7 +473,7 @@ def visualize_stepsize_in_locomotion(stepsize_yaml, #str or dict,
 
         for elem in content.values():
             new_stepsize = [stepsize for stepsize in elem[bpt]['diff'] 
-                            if stepsize > CUTOFF]
+                            if stepsize > STEPSIZE_MIN]
             all_stepsizes.extend(new_stepsize)
         
         # visualize the result into a histogram

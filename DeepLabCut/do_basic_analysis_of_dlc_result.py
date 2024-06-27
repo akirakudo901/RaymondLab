@@ -1,6 +1,6 @@
 # Author: Akira Kudo
 # Created: 2024/04/28
-# Last Updated: 2024/05/09
+# Last Updated: 2024/06/13
 
 import os
 
@@ -45,7 +45,9 @@ def repeated_ANOVA_on_specific_variable(csv_path : str,
     pass
 
 def carry_out_significance_tests_on_csv(csv_path : str,
-                                        significance_level : float=0.05):
+                                        significance_level : float=0.05,
+                                        savedir : str=None,
+                                        savename : str=None):
     
     def carry_out_MWU_test_and_print_result(voi : str, 
                                             alternative : str='two-sided'):
@@ -54,25 +56,33 @@ def carry_out_significance_tests_on_csv(csv_path : str,
             variable_of_interest=voi,
             alternative=alternative
             )
-        print(f"MWU test on {voi}:")
-        print(f"- {mt1} (n={len(tdcm_1)}), {mt2} (n={len(tdcm_2)})")
-        print(f"- p={p_val}; Significance level {'not achieved...' if p_val > significance_level else 'achieved!'}")
+        text = f"MWU test on {voi}:\n" + \
+               f"- {mt1} (n={len(tdcm_1)}), {mt2} (n={len(tdcm_2)})\n" + \
+               f"- p={p_val}; Significance level {'not achieved...' if p_val > significance_level else 'achieved!'}"
+        print(text)
+        return text
 
     print(f"Significance level set to: {significance_level}.")
     # first do Mann-Whitney U test on two distributions
     # or if possible, t-test
     # this is for: Total Distance Cm, Center Time
-    carry_out_MWU_test_and_print_result(voi=TOTAL_DISTANCE_CM, alternative='two-sided')
-    carry_out_MWU_test_and_print_result(voi=CENTER_TIME, alternative='two-sided')
+    result1 = carry_out_MWU_test_and_print_result(voi=TOTAL_DISTANCE_CM, alternative='two-sided')
+    result2 = carry_out_MWU_test_and_print_result(voi=CENTER_TIME, alternative='two-sided')
     
-    # then do 
+    # then save the result
+    if savedir is not None and savename is not None:
+        with open(os.path.join(savedir, savename), 'w') as f:
+            f.write(result1 + "\n-----------------\n" + result2)
 
 if __name__ == "__main__":
     CSV_PATHS = [
         # r"C:\Users\mashi\Desktop\temp\YAC128\basic_analysis\YAC128_analysis_data_trunc_filt.csv",
-        r"C:\Users\mashi\Desktop\temp\YAC128\basic_analysis\YAC128_analysis_data_trunc_unfilt.csv",
+        # r"C:\Users\mashi\Desktop\temp\YAC128\basic_analysis\YAC128_analysis_data_trunc_unfilt.csv",
         # r"C:\Users\mashi\Desktop\temp\Q175\basic_analysis\Q175_analysis_data_trunc_filt.csv",
-        r"C:\Users\mashi\Desktop\temp\Q175\basic_analysis\Q175_analysis_data_trunc_unfilt.csv",
+        # r"C:\Users\mashi\Desktop\temp\Q175\basic_analysis\Q175_analysis_data_trunc_unfilt.csv",
+        # r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\RaymondLab\OpenField\3part1 MatlabAndPrismAnalysis\MATLAB\openfield_photometry_30min_DLC\data\results\2024_05_28_new_mice_Q175_analysis_data_unfilt.csv"
+        # r"C:\Users\mashi\Desktop\temp\YAC128\basic_analysis\YAC128_analysis_data_trunc_unfilt_NONMOVINGMOUSE_DROPPED.csv",
+        r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\RaymondLab\OpenField\3part1 MatlabAndPrismAnalysis\MATLAB\openfield_photometry_30min_DLC\data\results\Q175_BrownNBlack_analysis_data_filt.csv"
     ]
 
     SIGNIFICANCE_LEVEL = 0.05
