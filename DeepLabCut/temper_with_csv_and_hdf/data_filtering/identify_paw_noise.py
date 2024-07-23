@@ -122,7 +122,8 @@ def identify_bodypart_noise_by_impossible_speed(
         savedir : str,
         threshold : float=IMPOSSIBLE_MOVE_TOLERANCE,
         save_figure : bool=True,
-        show_figure : bool=True
+        show_figure : bool=True,
+        print_info : bool=True
         ):
     """
     Identifies noise of a given body part based on an impossible
@@ -140,6 +141,7 @@ def identify_bodypart_noise_by_impossible_speed(
     Defaults to IMPOSSIBLE_MOVE_TOLERANCE.
     :param bool save_figure: Whether to save figures, defaults to True.
     :param bool show_figure: Whether to show figures, defaults to True.
+    :param bool print_info: Show information of processing in the console. Defaults to True.
 
     :returns pd.DataFrame returned_df: A dataframe holding information about identified
     impossible frames & wrong frames based on those impossible frames.
@@ -170,7 +172,9 @@ def identify_bodypart_noise_by_impossible_speed(
         data.append(where_bpt_moved_impossibly)
         
         # visualize where is a noise and where isn't
-        print(f"There are {np.sum(where_bpt_moved_impossibly)} frames with {bpt} noise!")
+        if print_info:
+            print(f"There are {np.sum(where_bpt_moved_impossibly)} frames with {bpt} noise!")
+        
         if show_figure or save_figure:
             plt.step(range(len(where_bpt_moved_impossibly)), where_bpt_moved_impossibly)
             plt.title(f"All frames where there is impossible {bpt} movement")
@@ -181,8 +185,11 @@ def identify_bodypart_noise_by_impossible_speed(
         # find frames that are wrong based on the found impossible pattern
         wrong_frames = find_wrong_bodypart_frame(where_bpt_moved_impossibly)
         data.append(wrong_frames)
-        print("------------")
-        print(f"There are {np.sum(wrong_frames)} frames where the {bpt} is not in its correct position!")
+        
+        if print_info:
+            print("------------")
+            print(f"There are {np.sum(wrong_frames)} frames where the {bpt} is not in its correct position!")
+        
         if show_figure or save_figure:
             plt.step(range(len(wrong_frames)), wrong_frames)
             plt.title(f"All frames where the {bpt} is wrong in position")
@@ -196,9 +203,11 @@ def identify_bodypart_noise_by_impossible_speed(
             threshold=120, noise_timeout=15
             )
         data.append(loc_wrong_frames)
-        print("------------")
-        print(f"There are {np.sum(loc_wrong_frames)} frames where, location-based, " + 
-              f"the {bpt} is not in its correct position!")
+
+        if print_info:
+            print("------------")
+            print(f"There are {np.sum(loc_wrong_frames)} frames where, location-based, " + 
+                f"the {bpt} is not in its correct position!")
         if show_figure or save_figure:
             plt.step(range(len(loc_wrong_frames)), loc_wrong_frames)
             plt.title(f"All frames where the {bpt} is wrong based on location")
