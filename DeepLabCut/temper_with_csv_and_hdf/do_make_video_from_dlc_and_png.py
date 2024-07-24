@@ -1,6 +1,6 @@
 # Author: Akira Kudo
 # Created: 2024/04/08
-# Last Updated: 2024/05/10
+# Last Updated: 2024/07/02
 
 import os
 
@@ -74,8 +74,9 @@ def extract_frames_and_construct_video_from_dataframe(
 
     :param str video_path: The path to the video we extract frames from.
     :param pd.DataFrame dlc_df: The dataframe containing DLC body parts data.
-    :param str img_dir: The directory to which we extract frames - a 
-    subfolder is created with this mouse's name, to which frames are saved.
+    :param str img_dir: The directory to which we extract frames, or from where
+    we fetch frames if already extracted. A subfolder to which frames are saved
+    with this mouse's name is expected, or otherwise created.
     :param str output_dir: The directory the generated video is output.
     :param int start: Start of range of frames extracted, inclusive.
     :param int end: End of range of frames extracted, inclusive.
@@ -94,13 +95,18 @@ def extract_frames_and_construct_video_from_dataframe(
     if output_name is None:
         output_name = f"{mousename}_{start}to{end}_{fps}fps.mp4"
 
+    # if img_dir does not exist, create it
     if not os.path.exists(img_dir):
         os.mkdir(img_dir)
+    # if a subfolder to img_dir named after the mouse does not exist, create it
+    mouse_subfolder = os.path.join(img_dir, mousename)
+    if not os.path.exists(mouse_subfolder):
+        os.mkdir(mouse_subfolder)
 
     try:
         print("Generating the video...")
         make_video_from_dlc_dataframe_and_images(
-            df=dlc_df, img_dir=img_dir, 
+            df=dlc_df, img_dir=mouse_subfolder, 
             frame_start=start, frame_end=end,
             fps=fps, output_dir=output_dir, output_name=output_name,
             trailpoints=trailpoints
@@ -110,13 +116,13 @@ def extract_frames_and_construct_video_from_dataframe(
         if str(e).startswith("An image with extension "):
             print("Extracting frames.")
             extract_frame_by_number(input_file=video_path, 
-                                    output_file=os.path.join(img_dir, img_name), 
+                                    output_file=os.path.join(mouse_subfolder, img_name), 
                                     frame_numbers=list(range(start, end+1)))
             print("Done!")
             print("-----------------------------------")
             print("Generating the video...")
             make_video_from_dlc_dataframe_and_images(
-                df=dlc_df, img_dir=img_dir, 
+                df=dlc_df, img_dir=mouse_subfolder, 
                 frame_start=start, frame_end=end,
                 fps=fps, output_dir=output_dir, output_name=output_name,
                 trailpoints=trailpoints
