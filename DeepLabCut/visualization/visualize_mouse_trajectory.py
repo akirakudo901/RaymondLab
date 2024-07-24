@@ -1,20 +1,22 @@
 # Author: Akira Kudo
 # Created: 2024/04/27
-# Last Updated: 2024/05/31
+# Last Updated: 2024/07/23
 # Created: -
-# Last updated: 2024/05/31
+# Last updated: 2024/07/23
 
 import os
+from typing import Union
 
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 
 from dlc_io.utils import read_dlc_csv_file
 from utils_to_be_replaced_oneday import get_mousename
 
 FIG_X_MAX, FIG_X_MIN, FIG_Y_MAX, FIG_Y_MIN = 1080, 0, 1080, 0
 
-def visualize_mouse_trajectory(csvpath : str, 
+def visualize_mouse_trajectory(csv_or_df : Union[str, pd.DataFrame],
                                figureName : str,
                                save_path : str,
                                start : int=0, 
@@ -28,7 +30,8 @@ def visualize_mouse_trajectory(csvpath : str,
     DLC csvs is directly used to make the plot (unlike BSOID side's 
     plot_mouse_trajectory which uses smoothed data).
 
-    :param str csvpath: Path to csv holding DLC data.
+    :param str or pd.DataFrame csv_or_df: Either a path to csv holding DLC data,
+    or a pandas DataFrame holding DLC data.
     :param str figureName: Name of figure to be saved.
     :param str save_path: Path to where we save the figure.
     :param int start: Start frame from which we render, defaults to 0
@@ -37,7 +40,11 @@ def visualize_mouse_trajectory(csvpath : str,
     :param bool show_figure: Whether to show figures as we go, defaults to True
     :param bool save_figure: Whether to save figures as we go, defaults to True
     """
-    raw_data = read_dlc_csv_file(csvpath, include_scorer=False)
+    if type(csv_or_df) == str:
+        raw_data = read_dlc_csv_file(csv_or_df, include_scorer=False)
+    else:
+        raw_data = csv_or_df
+        
     # bodyparts in order: snout, rightforepaw, leftforepaw, righthindpaw,
     #                     lefthindpaw, tailbase, belly
     if bodypart.lower() not in np.unique(raw_data.columns.get_level_values('bodyparts')):
