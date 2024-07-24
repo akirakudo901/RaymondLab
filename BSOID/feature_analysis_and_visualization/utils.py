@@ -2,6 +2,16 @@
 import numpy as np
 import re
 
+BPT_ABBREV = {
+    'snout' : 'sn',
+    'rightforepaw' : 'rfp', 
+    'leftforepaw' : 'lfp',
+    'righthindpaw' : 'rhp',
+    'lefthindpaw' : 'lhp',
+    'tailbase' : 'tb',
+    'belly' : 'bl'
+}
+
 # BELOW CODE WAS TAKEN FROM alimanfoo at:
 # https://gist.github.com/alimanfoo/c5977e87111abe8127453b21204c1065
 def find_runs(x):
