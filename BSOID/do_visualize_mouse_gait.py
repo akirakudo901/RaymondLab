@@ -1,21 +1,25 @@
 # Author: Akira Kudo
 # Created: 2024/05/17
-# Last Updated: 2024/06/26
+# Last Updated: 2024/07/23
 
 import os
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import yaml
 
 from bsoid_io.utils import read_BSOID_labeled_features
-from feature_analysis_and_visualization.visualization.visualize_mouse_gait import visualize_locomotion_stats, visualize_mouse_gait_speed, visualize_stepsize_in_locomotion, visualize_stepsize_in_locomotion_in_multiple_mice, visualize_stepsize_in_locomotion_in_single_mouse, visualize_stepsize_in_locomotion_in_mice_groups
+from feature_analysis_and_visualization.analysis.analyze_mouse_gait import aggregate_stepsize_per_body_part, filter_stepsize_dict_by_locomotion_to_use, remove_outlier_data
+from feature_analysis_and_visualization.utils import get_mousename
+from feature_analysis_and_visualization.visualization.visualize_mouse_gait import read_stepsize_yaml, visualize_locomotion_stats, visualize_mouse_gait_speed, visualize_stepsize_standard_deviation_per_mousegroup, visualize_stepsize_in_locomotion, visualize_stepsize_in_locomotion_in_multiple_mice, visualize_stepsize_in_locomotion_in_single_mouse, visualize_stepsize_in_locomotion_in_mice_groups, STEPSIZE_MIN
 from label_behavior_bits.preprocessing import filter_bouts_smaller_than_N_frames
 
-BINSIZE = 20
+BINSIZE = 10#20
+ALL_PAWS = ['rightforepaw', 'leftforepaw', 'righthindpaw', 'lefthindpaw']
 
 # YAC128
-if False:
+if True:
     LABEL_CSV = os.path.join(
         r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\BSOID\YAC128\labeled_features\allcsv_2024_05_16_Akira\WT_filt", 
         "Feb-23-2023_20220213051553_326787_m2DLC_resnet50_WhiteMice_OpenfieldJan19shuffle1_1030000_filtered_labeled_features.csv"
@@ -55,6 +59,8 @@ if False:
         # WT
         # HD
         ]
+    
+    STEPS_TO_USE = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\RaymondLab\YAC128_locomotion_to_use.yaml"
 
 else: # Q175
     LABEL_NPY = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\BSOID\results\feats_labels\\" + \
@@ -169,6 +175,10 @@ if False:
 
 # visualize_stepsize_in_locomotion_in_single_mouse
 if True:
+    with open(STEPS_TO_USE, 'r') as f:
+        content = f.read()
+        locomotion_to_use = yaml.safe_load(content)
+
     # visualize step size in each mice - requires the 'paw rest distance over time' files
     if False:
         print("Processing single mice!")
@@ -182,12 +192,19 @@ if True:
             for file in os.listdir(fullpath):
                 if 'pawRestDistanceOverTime' in file:
                     even_fullpath = os.path.join(fullpath, file)
+
+                    stepsize_info = read_stepsize_yaml(even_fullpath)
+                    stepsize_info = filter_stepsize_dict_by_locomotion_to_use(
+                        dict=stepsize_info,
+                        mousename=mousename,
+                        locomotion_to_use=locomotion_to_use
+                        )
                     
                     visualize_stepsize_in_locomotion_in_single_mouse(
-                        stepsize_yaml=even_fullpath,
+                        stepsize_info=stepsize_info,
                         title=f"Distance Between Consecutive Rests ({mousename})",
                         savedir=fullpath,
-                        savename=f"distanceBetweenConsecutiveRests_{mousename}",
+                        savename=f"selected_distanceBetweenConsecutiveRests_{mousename}",
                         binsize=BINSIZE,
                         show_figure=False,
                         save_figure=True
@@ -196,62 +213,63 @@ if True:
         print("SINGLE MICE DONE!")
 
     if True:
+        def filter_yamls_by_mousenames_and_stepsizes(micename : list,
+                                                     locomotion_to_use : dict):
+            filt_by_micename =  [os.path.join(ABOVE_FOLDER, folder, yaml) 
+                                 for folder in [os.path.join(ABOVE_FOLDER, fol) 
+                                                for fol in os.listdir(ABOVE_FOLDER) 
+                                                if os.path.isdir(os.path.join(ABOVE_FOLDER, fol)) and 
+                                                fol in micename]
+                                for yaml in os.listdir(os.path.join(ABOVE_FOLDER, folder))
+                                if (yaml.startswith("pawRestDistanceOverTime") and 
+                                    yaml.endswith(".yaml"))]
+            
+            filt_to_use = [filter_stepsize_dict_by_locomotion_to_use(
+                dict=read_stepsize_yaml(yaml), 
+                mousename=get_mousename(yaml),
+                locomotion_to_use=locomotion_to_use) 
+                for yaml in filt_by_micename
+                ]
+            matching_micename = [get_mousename(yaml) for yaml in filt_by_micename]
+            return filt_to_use, matching_micename
+
         YAMLS = [os.path.join(ABOVE_FOLDER, folder, yaml) 
                 for folder in [os.path.join(ABOVE_FOLDER, fol) 
                                for fol in os.listdir(ABOVE_FOLDER) 
                                if os.path.isdir(os.path.join(ABOVE_FOLDER, fol))]
                 for yaml in os.listdir(os.path.join(ABOVE_FOLDER, folder))
-                if yaml.endswith(".yaml")]
+                if (yaml.startswith("pawRestDistanceOverTime") and 
+                    yaml.endswith(".yaml"))]
         
+        all_dicts = [filter_stepsize_dict_by_locomotion_to_use(
+                    dict=read_stepsize_yaml(yaml), 
+                    mousename=get_mousename(yaml),
+                    locomotion_to_use=locomotion_to_use) 
+                for yaml in YAMLS]
+        all_micename = [get_mousename(path) for path in YAMLS]
         
+        wt_dicts, wt_micename = filter_yamls_by_mousenames_and_stepsizes(WT_MICE, locomotion_to_use)
+        hd_dicts, hd_micename = filter_yamls_by_mousenames_and_stepsizes(HD_MICE, locomotion_to_use)
+        male_dicts, male_micename     = filter_yamls_by_mousenames_and_stepsizes(MALE_MICE, locomotion_to_use)
+        female_dicts, female_micename = filter_yamls_by_mousenames_and_stepsizes(FEMALE_MICE, locomotion_to_use)
 
-        WT_YAMLS = [os.path.join(ABOVE_FOLDER, folder, yaml) 
-                    for folder in [os.path.join(ABOVE_FOLDER, fol) 
-                                for fol in os.listdir(ABOVE_FOLDER) 
-                                if os.path.isdir(os.path.join(ABOVE_FOLDER, fol)) and 
-                                fol in WT_MICE]
-                    for yaml in os.listdir(os.path.join(ABOVE_FOLDER, folder))
-                    if yaml.endswith(".yaml")]
-        
-        HD_YAMLS = [os.path.join(ABOVE_FOLDER, folder, yaml) 
-                    for folder in [os.path.join(ABOVE_FOLDER, fol) 
-                                for fol in os.listdir(ABOVE_FOLDER) 
-                                if os.path.isdir(os.path.join(ABOVE_FOLDER, fol)) and 
-                                fol in HD_MICE]
-                    for yaml in os.listdir(os.path.join(ABOVE_FOLDER, folder))
-                    if yaml.endswith(".yaml")]
-        
-        MALE_YAMLS = [os.path.join(ABOVE_FOLDER, folder, yaml) 
-                    for folder in [os.path.join(ABOVE_FOLDER, fol) 
-                                for fol in os.listdir(ABOVE_FOLDER) 
-                                if os.path.isdir(os.path.join(ABOVE_FOLDER, fol)) and 
-                                fol in MALE_MICE]
-                    for yaml in os.listdir(os.path.join(ABOVE_FOLDER, folder))
-                    if yaml.endswith(".yaml")]
-        
-        FEMALE_YAMLS = [os.path.join(ABOVE_FOLDER, folder, yaml) 
-                    for folder in [os.path.join(ABOVE_FOLDER, fol) 
-                                for fol in os.listdir(ABOVE_FOLDER) 
-                                if os.path.isdir(os.path.join(ABOVE_FOLDER, fol)) and 
-                                fol in FEMALE_MICE]
-                    for yaml in os.listdir(os.path.join(ABOVE_FOLDER, folder))
-                    if yaml.endswith(".yaml")]
-        
         if False:
-            YAMLGROUPS = [YAMLS, HD_YAMLS, WT_YAMLS, MALE_YAMLS, FEMALE_YAMLS]
+            DICTGROUPS = [all_dicts, hd_dicts, wt_dicts, male_dicts, female_dicts]
+            MICENAME_GROUPS = [all_micename, hd_micename, wt_micename, male_micename, female_micename]
             if "Q175" in ABOVE_FOLDER:
                 GROUPNAMES = ["Q175-B6", "Q175", "B6", "Male Q175-B6", "Female Q175-B6"]
             elif "YAC128" in ABOVE_FOLDER:
                 GROUPNAMES = ["YAC128-FVB", "YAC128", "FVB", "Male YAC128-FVB", "Female YAC128-FVB"]
 
             print("Processing mice individually per group!")
-            for yaml_group, groupname in zip(YAMLGROUPS, GROUPNAMES):
+            for dict_group, groupname, mousenames in zip(DICTGROUPS, GROUPNAMES, MICENAME_GROUPS):
                 print(f"Processing group: {groupname}!")
                 visualize_stepsize_in_locomotion_in_multiple_mice(
-                    yamls=yaml_group,
+                    stepsizes=dict_group,
+                    mousenames=mousenames,
                     title=f"Frequency of Step Size Locomotion In {groupname} Mice",
                     savedir=ABOVE_FOLDER,
-                    savename=f"VisualizeStepsizeInLocomotionIn{groupname.replace(' ', '')}",
+                    savename=f"selected_VisualizeStepsizeInLocomotionIn{groupname.replace(' ', '')}",
                     binsize=BINSIZE,
                     show_figure=False,
                     save_figure=True
@@ -260,34 +278,101 @@ if True:
             print("PROCESSING MICE INDIVIDUALLY PER GROUP DONE!")
         
         if True:
+            REMOVE_OUTLIERS = True
+
             # YAC128
             if "YAC128" in ABOVE_FOLDER:
                 if True:
                     GROUPNAMES = ["YAC128", "FVB"]
-                    YAMLGROUPS = [HD_YAMLS, WT_YAMLS]
+                    DICTGROUPS = [hd_dicts, wt_dicts]
                     
                 else:
                     GROUPNAMES = ["Male YAC128-FVB", "Female YAC128-FVB"]
-                    YAMLGROUPS = [MALE_YAMLS, FEMALE_YAMLS]
+                    DICTGROUPS = [male_dicts, wt_dicts]
             
             # Q175
             elif "Q175" in ABOVE_FOLDER:
                 if True:
                     GROUPNAMES = ["Q175", "B6"]
-                    YAMLGROUPS = [HD_YAMLS, WT_YAMLS]
+                    DICTGROUPS = [hd_dicts, wt_dicts]
                 else:
                     GROUPNAMES = ["Male Q175-B6", "Female Q175-B6"]
-                    YAMLGROUPS = [MALE_YAMLS, FEMALE_YAMLS]
+                    DICTGROUPS = [male_dicts, wt_dicts]
             
-            print("Processing mice grouped together!")
-            visualize_stepsize_in_locomotion_in_mice_groups(
-                yamls_groups=YAMLGROUPS,
-                groupnames=GROUPNAMES,
-                title=f"Distribution of Step Size During Locomotion ({', '.join(GROUPNAMES)})",
-                savedir=ABOVE_FOLDER,
-                savename=f"LocomotionStepSizeDistributionPerMouseGroup_{'_'.join(GROUPNAMES)}",
-                binsize=BINSIZE,
-                show_figure=False,
-                save_figure=True
-            )
-            print("PROCESSING MICE GROUPED TOGETHER DONE!")
+
+            if False:
+                print("Processing mice grouped together!")
+                
+                if REMOVE_OUTLIERS:
+                    # remove any outlier before visualizing
+                    no_outlier_dicts = []
+                    for dicts in DICTGROUPS:
+                        merged_dict = aggregate_stepsize_per_body_part(
+                            dictionaries=dicts, bodyparts=ALL_PAWS, cutoff=STEPSIZE_MIN)
+                        for key, val in merged_dict.items():
+                            merged_dict[key] = {"diff" : remove_outlier_data(np.array(val))}
+                        no_outlier_dicts.append([{"dummy" : merged_dict}]) # dummy level to make compatible
+                        # with visualizing code that follows
+
+                if REMOVE_OUTLIERS:
+                    title = f"Distribution of Step Size During Locomotion \nNo Outliers ({', '.join(GROUPNAMES)}) - Binsize={BINSIZE}"
+                    savename = f"selected_NoOutlier_HalfBinsize_LocomotionStepSizeDistributionPerMouseGroup_{'_'.join(GROUPNAMES)}"
+                else:
+                    title = f"Distribution of Step Size During Locomotion \nWith Outliers ({', '.join(GROUPNAMES)}) - Binsize={BINSIZE}"
+                    savename = f"selected_WithOutlier_LocomotionStepSizeDistributionPerMouseGroup_{'_'.join(GROUPNAMES)}"
+
+                visualize_stepsize_in_locomotion_in_mice_groups(
+                    stepsize_groups=no_outlier_dicts,
+                    groupnames=GROUPNAMES,
+                    title=title,
+                    savedir=ABOVE_FOLDER,
+                    savename=savename,
+                    binsize=BINSIZE,
+                    show_figure=False,
+                    save_figure=True
+                )
+                print("PROCESSING MICE GROUPED TOGETHER DONE!")
+        
+            if True:
+                BODYPARTS = ALL_PAWS
+
+                print("Processing SD of step sizes per group!")
+                if REMOVE_OUTLIERS:
+                    # remove any outlier before visualizing
+                    dictgroups_no_outlier = []
+                    for dicts in DICTGROUPS:
+                        no_outlier_dicts = []
+                        for d in dicts:
+                            if len(d) == 0: 
+                                merged_dict = {}
+                                for bpt in BODYPARTS:
+                                    merged_dict[bpt] = {"diff" : np.array([])}
+                            else:
+                                merged_dict = aggregate_stepsize_per_body_part(
+                                    dictionaries=[d], bodyparts=ALL_PAWS, cutoff=STEPSIZE_MIN)
+                                for key, val in merged_dict.items():
+                                    merged_dict[key] = {"diff" : remove_outlier_data(np.array(val))}
+                                
+                            no_outlier_dicts.append({"dummy" : merged_dict}) # dummy level to make compatible
+                            # with visualizing code that follows
+                        dictgroups_no_outlier.append(no_outlier_dicts)
+
+                visualize_stepsize_standard_deviation_per_mousegroup(
+                    stepsize_groups=dictgroups_no_outlier,
+                    mousenames=[hd_micename, wt_micename],
+                    groupnames=GROUPNAMES,
+                    data_is_normal=False,
+                    significance=0.05,
+                    colors=["pink", "black"],
+                    bodyparts=BODYPARTS, 
+                    savedir=ABOVE_FOLDER,
+                    savename=f"selected_NoOutlier_LocomotionStepSizeStandardDevPerMouseGroup_{'_'.join(GROUPNAMES)}",
+                    # cutoff : float=STEPSIZE_MIN,
+                    show_mean=True,
+                    show_mousename=True,
+                    save_figure=False,
+                    show_figure=False,
+                    save_mean_comparison_result=True
+                    )
+                
+                print("PROCESSING STEP SIZE PER MOUSE GROUP DONE!")
