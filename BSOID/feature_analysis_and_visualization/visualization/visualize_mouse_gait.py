@@ -1,6 +1,6 @@
 # Author: Akira Kudo
 # Created: 2024/03/31
-# Last updated: 2024/07/23
+# Last updated: 2024/07/25
 
 import os
 
@@ -13,7 +13,7 @@ import pandas as pd
 from scipy.stats import mannwhitneyu, ttest_ind
 import yaml
 
-from ..utils import find_runs, get_mousename, process_upper_and_lower_limit
+from ..utils import find_runs, get_mousename, process_upper_and_lower_limit, BPT_ABBREV
 from ..analysis import analyze_mouse_gait
 
 LOCOMOTION_LABELS = [38]
@@ -174,6 +174,7 @@ def visualize_mouse_paw_rests_in_locomomotion(
         bodyparts : list,
         savedir : str,
         savename : str,
+        also_render_in_line : list,
         averaged : bool=True,
         annotate_framenum : bool=False,
         length_limits : tuple=(None, None),
@@ -187,14 +188,17 @@ def visualize_mouse_paw_rests_in_locomomotion(
     Identifies 'plot_N_runs' sequences where label happens consecutively within 
     range of length_limits, finding the position of paws at rest during these sequences
     by observing any lack of movement (speed between frames being below threshold).
-    Renders such paw rests as well as the trajectory of non-paw body parts as a 
+    Renders such paw rests as well as the trajectory of specified body parts as a 
     single figure per such sequence. Which body part are rendered can be specified.
 
     :param pd.DataFrame df: Data frame holding DLC body part data.
     :param np.ndarray label: Label from B-SOID applied to DLC data.
-    :param list bodyparts: Body parts to render.
+    :param list bodyparts: Body parts to render. Any body part with 'paw' in it
+    will be depicted in paw rests, and any others in lines of the trajectory.
     :param str savedir: Directory to where figures can be saved.
     :param str savename: Name of the saved figure.
+    :param list also_render_in_line: A list of body part names in string which will be 
+    rendered as lines on top of the individual paws being depicted.
     :param bool averaged: Create figures which paw positions are averaged
     per each identified paw rest, defaults to True
     :param bool annotate_framenum: Whether to annotate each paw identified
@@ -221,27 +225,35 @@ def visualize_mouse_paw_rests_in_locomomotion(
     C = colorclass.to_rgba(np.linspace(0, 1, len(bodyparts)))
     colors = C[:, :3]
 
-    df, avg_df = filter_nonpawrest_motion(df=df, label=label, show_nonpaw=True, 
-                                          threshold=threshold, locomotion_labels=locomotion_label, 
-                                          average_pawrest=True, ignore_close_paw=STEPSIZE_MIN)
+    filt_df, avg_df = filter_nonpawrest_motion(df=df, label=label, show_nonpaw=True, 
+                                               threshold=threshold, locomotion_labels=locomotion_label, 
+                                               average_pawrest=True, ignore_close_paw=STEPSIZE_MIN)
     
     # we will render as figure each sequence of movement into a 2D grid
     for start, end in zip(starts, ends):
         _, ax = plt.subplots()
 
         for bpt_idx, bpt in enumerate(bodyparts):
-            x, y = df[bpt, 'x'].to_numpy(), df[bpt, 'y'].to_numpy()
-            run_x, run_y = x[start:end+1], y[start:end+1]
-            run_start = np.nonzero(~np.isnan(x))[0]
-            run_start = run_start[(run_start >= start) & (run_start <= end)]
 
+            # render the trajectory
+            if (bpt in also_render_in_line) or ("paw" not in bpt):
+                x, y = df[bpt, 'x'].to_numpy(), df[bpt, 'y'].to_numpy()
+                run_x, run_y = x[start:end+1], y[start:end+1]
+                ax.plot(run_x, run_y, color=colors[bpt_idx], label=bpt)
+
+            # render the paw rests
             if 'paw' in bpt:
-                if averaged:        
+                if averaged:
                     bout = avg_df[(avg_df[COL_START] > start) & 
                                   (avg_df[COL_START] < end) & 
                                   (avg_df[COL_BODYPART] == bpt)]
                     run_x, run_y = bout[COL_X_AVG].to_numpy(), bout[COL_Y_AVG].to_numpy()
                     run_start = bout[COL_START].to_numpy()
+                else:
+                    x, y = filt_df[bpt, 'x'].to_numpy(), filt_df[bpt, 'y'].to_numpy()
+                    run_x, run_y = x[start:end+1], y[start:end+1]
+                    run_start = np.nonzero(~np.isnan(x))[0]
+                    run_start = run_start[(run_start >= start) & (run_start <= end)]
                 
                 ax.scatter(run_x, run_y, marker='3', color=colors[bpt_idx], label=bpt)
 
@@ -253,21 +265,24 @@ def visualize_mouse_paw_rests_in_locomomotion(
                                     (x_coord.item()+offset, y_coord.item()+offset),
                                     fontsize="xx-small")
 
-            else:
-                ax.plot(run_x, run_y, color=colors[bpt_idx], label=bpt)
         ax.set_xlabel('X (pixel)')
         ax.set_ylabel('Y (pixel)')
         ax.set_xlim([0, 1100]); ax.set_ylim([0, 1100])
         ax.legend()
 
-        plt.title(f"Locomotion Paw Stationary Moments {start}~{end} \n" +
-                  f"(Threshold={threshold}, Length Limits={length_limits}, Averaged={averaged})")
-
+        title = (f"Locomotion Paw Stationary Moments {start}~{end} \n" +
+                 f"(Threshold={threshold}, Length Limits={length_limits}, Averaged={averaged})")
+        if len(also_render_in_line) > 0:
+            title += f"\nTrajectory shown for {','.join(also_render_in_line)}"
+        plt.title(title)
+        
         if save_figure:
-            plt.savefig(os.path.join(
-                savedir, 
-                f"{savename.replace('.png', '')}_{start}To{end}_thresh{threshold}_lim{length_limits[0]}To{length_limits[1]}{'_annotated' if annotate_framenum else ''}.png")
-                )
+            render_in_line_namepart = ('_' + '_'.join([BPT_ABBREV[bpt] for bpt in also_render_in_line])) \
+                                      if len(also_render_in_line) > 0 else ''
+            new_savename = (f"{savename.replace('.png', '')}_" + 
+                            f"{start}To{end}_thresh{threshold}_lim{length_limits[0]}To{length_limits[1]}" + 
+                            f"{'_annotated' if annotate_framenum else ''}{render_in_line_namepart}.png")
+            plt.savefig(os.path.join(savedir, new_savename))
         if show_figure:
             plt.show()
         else:
@@ -958,7 +973,13 @@ def filter_nonpawrest_motion(df : pd.DataFrame,
     for it, filtering out:
     - any non-locomotion label frame 
     - any locomotion label frame which is followed by movement above 'threshold'
-    If average_pawrest, we take each paw rest, averaging the time while it is resting.
+    Returns the resulting data frame after filtering.
+    If average_pawrest, we take each paw rest, averaging their location over the 
+    the duration of its rest. Also return another data frame holding info in each row of: 
+    [a body part of concern, start of its rest, end of its rest, 
+     x coordinate averaged over the rest, y coordinate averaged over the rest].
+    The corresponding column names are accessible as constants:
+     [COL_BODYPART, COL_START, COL_LENGTH, COL_X_AVG, COL_Y_AVG].
 
     :param pd.DataFrame df: DataFrame holding DLC data.
     :param np.ndarray label: BSOID label for the DLC data. 
@@ -975,21 +996,26 @@ def filter_nonpawrest_motion(df : pd.DataFrame,
     :param float ignore_close_paw: Whether to ignore consecutive paws closer than 'ignore_close_paw'
     post average. e.g. if a paw rest sequence is [5, 6, 15, 18] and 'ignore_close_paw' = 2,
     the '6' paw is ignored to yield [5, 15, 18] instead. Defaults to None, no ignoring.
+
+    :returns pd.DataFrame filt_df: The data frame where corresponding paw rests are filtered out.
+    :returns pd.DataFrame average_df: if 'average_pawrest' is true, the data frame specified in 
+    the descrption of the function. Otherwise, None.
     """
+    filt_df = df.copy(deep=True)
     # remove entries in df where movement of 'paws' is above threshold
-    unique_bpts = np.unique(df.columns.get_level_values('bodyparts'))
+    unique_bpts = np.unique(filt_df.columns.get_level_values('bodyparts'))
     for bpt in unique_bpts:
         if 'paw' in bpt:
-            x, y = df[bpt, 'x'].to_numpy(), df[bpt, 'y'].to_numpy()
+            x, y = filt_df[bpt, 'x'].to_numpy(), filt_df[bpt, 'y'].to_numpy()
             movement = np.sqrt(np.diff(x)**2 + np.diff(y)**2)
             movement = np.insert(movement, 0, 0) # pad first position as no movement
-            df.loc[movement > threshold, [bpt]] = np.nan
+            filt_df.loc[movement > threshold, [bpt]] = np.nan
         # completely remove entries for parts like snout and tailbase
         else:
             if not show_nonpaw:
-                df.loc[:, [bpt]] = np.nan
-    # remove entries in df that aren't locomotion bouts
-    df.loc[label != locomotion_labels[0], :] = np.nan
+                filt_df.loc[:, [bpt]] = np.nan
+    # remove entries in filt_df that aren't locomotion bouts
+    filt_df.loc[label != locomotion_labels[0], :] = np.nan
     
     # if average_pawrest: 1) identify paw rest sequences
     # 2) replace the entire sequence with its average
@@ -1000,7 +1026,7 @@ def filter_nonpawrest_motion(df : pd.DataFrame,
         for bpt in unique_bpts:
             latest_paw_pos = None
             if 'paw' in bpt:
-                isnan_x = np.isnan(df[bpt, 'x'].to_numpy())
+                isnan_x = np.isnan(filt_df[bpt, 'x'].to_numpy())
                 run_values, run_starts, run_lengths = find_runs(isnan_x)
                 
                 for nonnan_idx in np.where(run_values == False)[0]:
@@ -1008,12 +1034,12 @@ def filter_nonpawrest_motion(df : pd.DataFrame,
                     length = run_lengths[nonnan_idx].item()
                     end = start + length - 1
                     # get the average of x and y
-                    avg_x = np.mean(df.loc[start:end, (bpt, 'x')])
-                    avg_y = np.mean(df.loc[start:end, (bpt, 'y')])
+                    avg_x = np.mean(filt_df.loc[start:end, (bpt, 'x')])
+                    avg_y = np.mean(filt_df.loc[start:end, (bpt, 'y')])
 
                     # change the original data frame
-                    df.loc[start:end, (bpt, 'x')] = avg_x
-                    df.loc[start:end, (bpt, 'y')] = avg_y
+                    filt_df.loc[start:end, (bpt, 'x')] = avg_x
+                    filt_df.loc[start:end, (bpt, 'y')] = avg_y
 
                     # add a new row to the new dataframe
                     new_row = (bpt, start, length, avg_x, avg_y)
@@ -1041,7 +1067,7 @@ def filter_nonpawrest_motion(df : pd.DataFrame,
 
     else:
         average_df = None
-    return df, average_df
+    return filt_df, average_df
 
 def select_N_locomotion_sequences(label : np.ndarray,
                                   N : int=float("inf"),
