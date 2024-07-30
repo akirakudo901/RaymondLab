@@ -1,6 +1,6 @@
 # Author: Akira Kudo
 # Created: 2024/03/31
-# Last updated: 2024/07/25
+# Last updated: 2024/07/29
 
 import os
 
@@ -506,6 +506,7 @@ def visualize_stepsize_in_locomotion_in_mice_groups(
         title : str,
         savedir : str,
         savename : str,
+        group_colors : list=None,
         binsize : int=None,
         show_figure : bool=True,
         save_figure : bool=True
@@ -523,6 +524,8 @@ def visualize_stepsize_in_locomotion_in_mice_groups(
     :param str title: Title of the rendered figure.
     :param str savedir: Directory to which the figure would be saved.
     :param str savename: File name of the figure to be saved.
+    :param list group_colors: A list of strings specifying the color of each group. 
+    Defautls to being all blue.
     :param int binsize: Integer indicating bin size shared among histograms. 
     Defaults to not being specified.
     :param bool show_figure: Whether to show the figure, defaults to True
@@ -536,8 +539,13 @@ def visualize_stepsize_in_locomotion_in_mice_groups(
         _, axes = plt.subplots(len(groupnames), 1)
         min_stepsize, max_stepsize = float("inf"), float("-inf")
 
+        # if group colors isn't specified, default to being all blue
+        if group_colors is None:
+            group_colors = ["blue"] * len(groupname)
+
         # for each mouse group
-        for group_idx, (stepsizes, groupname) in enumerate(zip(stepsize_groups, groupnames)):
+        for group_idx, (stepsizes, groupname, groupcolor) in enumerate(
+                zip(stepsize_groups, groupnames, group_colors)):
             ax = axes if (len(groupnames) == 1) else axes[group_idx]
 
             # create a yaml that merges all such yamls together
@@ -553,17 +561,20 @@ def visualize_stepsize_in_locomotion_in_mice_groups(
                 
             extrema = visualize_stepsize_in_locomotion(stepsize_info=merged_yaml,
                                                        bodyparts=[bpt],
-                                                       title=groupname, 
+                                                       title=groupname,
+                                                       color=groupcolor, 
                                                        binsize=binsize,
-                                                       ax=ax)
+                                                       ax=ax,
+                                                       show_num_bouts=True,
+                                                       show_mean=True)
             if len(extrema) != 0:
                 min_stepsize = min(min_stepsize, extrema[bpt]["min"])
                 max_stepsize = max(max_stepsize, extrema[bpt]["max"])
             
             ax.set_title(groupname)
-            ax.set_xlabel('Step Size (pixel)')
-            if group_idx == 0:
-                ax.set_ylabel('Frequency')
+            if group_idx == (len(groupnames) - 1):
+                ax.set_xlabel('Step Size (pixel)')
+            ax.set_ylabel('Frequency')
         
         for i in range(len(groupnames)):
             ax = axes if (len(groupnames) == 1) else axes[i]
@@ -583,9 +594,11 @@ def visualize_stepsize_in_locomotion_in_mice_groups(
 def visualize_stepsize_in_locomotion(stepsize_info, #str or dict,
                                      bodyparts : list,
                                      title : str,
+                                     color : str="blue",
                                      binsize : int=None,
                                      ax : Axes=None,
-                                     show_num_bouts : bool=False):
+                                     show_num_bouts : bool=False,
+                                     show_mean : bool=False):
     """
     Visualizes the frequency of step sizes for the specified body parts
     in the given information on step sizes. A histogram is created and
@@ -596,17 +609,21 @@ def visualize_stepsize_in_locomotion(stepsize_info, #str or dict,
     specific format.
     :param list bodyparts: A list of body parts we visualize.
     :param str title: Title of the figure.
+    :param str color: Color of the histogram, defaults to blue.
     :param int binsize: Width of a bin, defaults to auto determined.
     :param Axes ax: Optionally an axis to render the histogram on, 
     if not given, a new figure is created.
     :param bool show_num_bouts: Whether to indicate the number of bouts 
     and strides used for each mouse, shown as part of the title of each graph / axis. 
     Defaults to False.
+    :param bool show_mean: Whether to show the mean of the given step size info
+    as a vertical line. Defaults to False. 
    
     :return dict extrema: A dictionary mapping each body part name with 
     entries of 'max' and 'min', specifying each the maximum and minimum 
     step sizes for that body part.
     """
+    MEANLINE_COLOR = "black"
     extrema = {}
 
     if type(stepsize_info) == dict:
@@ -647,12 +664,19 @@ def visualize_stepsize_in_locomotion(stepsize_info, #str or dict,
         # visualize the result into a histogram
         bins = range(0, (int(max(all_stepsizes)) // binsize + 1) * binsize, binsize)
         if ax is None:
-            plt.hist(all_stepsizes, bins=bins)
+            plt.hist(all_stepsizes, bins=bins, color=color)
+            if show_mean: plt.axvline(np.mean(all_stepsizes), color=MEANLINE_COLOR)
             plt.show()
             plt.title(title)
         else:
-            ax.hist(all_stepsizes, bins=bins)
+            ax.hist(all_stepsizes, bins=bins, color=color)
+            if show_mean: ax.axvline(np.mean(all_stepsizes), color=MEANLINE_COLOR)
             ax.set_title(title)
+        
+        if show_mean:
+            mean_line = mlines.Line2D([],[], color=MEANLINE_COLOR, linestyle="-")
+            handles, labels = [mean_line], ['Mean']
+            ax.legend(handles=handles, labels=labels)
     
         extrema[bpt] = {"min" : min(all_stepsizes), "max" : max(all_stepsizes)}
     return extrema
