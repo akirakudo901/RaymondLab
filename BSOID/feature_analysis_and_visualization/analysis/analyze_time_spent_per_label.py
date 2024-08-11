@@ -1,11 +1,13 @@
 # Author: Akira Kudo
 # Created: 2024/04/02
-# Last Updated: 2024/05/25
+# Last Updated: 2024/08/10
 
 from typing import List
 
+import os
 import numpy as np
 import pandas as pd
+from scipy.stats import mannwhitneyu, ttest_ind
 import tqdm
 
 from bsoid_io.utils import read_BSOID_labeled_csv, read_BSOID_labeled_features
@@ -166,9 +168,16 @@ def compute_time_spent_per_label_per_group_from_numpy_array(
     return df
 
 def analyze_time_spent_per_label_between_groups(
-        group1 : List[str],
-        group2 : List[str],
-        label_groups : List[int]=None,
+        group1 : list,
+        group2 : list,
+        groupnames : List[str],
+        significance : float,
+        savedir : str,
+        savename : str,
+        data_is_normal : bool,
+        equal_var : bool,
+        label_groups : List[int]=None, 
+        save_result : bool=True
         ):
     """
     Run analysis on aggregated data of groups, passed as lists to 
@@ -176,53 +185,208 @@ def analyze_time_spent_per_label_between_groups(
     
     Will examine:
     - The difference in average time spent between the same behavior 
-      label among the group.
-      <- unpaired t-test?
-
-    :param List[str] group1: The first group as list of csv paths.
-    :param List[str] group2: The second group as list of csv paths.
+      label among the group (Unpaired t / Mann-Whitney U)
+    
+    :param list group1: The first group as list of csv paths of labels, or 
+    numpy arrays of labels.
+    :param list group2: The second group as list of csv paths of labels, or 
+    numpy arrays of labels.
+    :param List[str] groupnames: A two-string list of the name of the groups 
+    analyzed, used when saving the result.
+    :param float significance: Level of significance used for comparsion.
+    :param str savedir: Directory to which we save analysis results.
+    :param str savename: Name of the file we save analysis results to.
+    :param bool data_is_normal: Whether the data is normal or not. Use
+    unpaired t-test if True, Mann-Whitney U test if False.
+    :param bool equal_var: Whether the data has equal variance or not. 
+    When data is normal, use unpaired t-test if True, and Welch's t-test
+    if False. When data is not normal, has no effect.
     :param List[int] label_groups: A list of all group labels to 
     examine for comparion. Defaults to None - all labels.
-    :returns List[int] all_labels: All unique labels, sorted ascending.
-    :returns (total_framcounts1, avg_percentages1): Both dictionaries 
-    mapping the label to its corresponding value.
-    :returns (total_framcounts2, avg_percentages2): Same for group 2.
+    :param bool save_result: Whether to save the analysis results.
+    
+    :returns tuple (srtd_framecounts1, strd_percentages1): A tuple, the first
+    dict mapping labels to the number of time the label was found in this array,
+    and the second mapping labels to the percentage of the array this label covers.
+    The first tuple is for group 1.
+    :returns tuple (srtd_framecounts2, strd_percentages2): The same tuple as the first
+    but for group 2.
+    :returns dict stats: A dict mapping each label to the statistic found through 
+    comparing the framecount of the two groups.
+    :returns dict pvals: A dict mapping each label to the P-value found through 
+    comparing the framecount of the two groups.
     """
-    def compute_statsistics_for_group(label_array : list):
-        """Takes a list of label np.ndarrays."""
-        framecounts, percentages = {},{}
-        for lbl in label_array:
-            unique_labels, framecount, percentage = compute_time_spent_per_label(
-                label=lbl, label_groups=label_groups)
-            for idx, unique_l in enumerate(unique_labels):
-                fc, perc = framecount[idx].item(), percentage[idx].item()
-                framecounts[unique_l] = framecounts.get(unique_l, 0) + fc
-                percentages[unique_l] = percentages.get(unique_l, 0) + perc
-        # resort the label orders
-        sorted_keys = list(framecounts.keys()); sorted_keys.sort()
-        srtd_framecounts, srtd_percentages = {},{}
-        for k in sorted_keys:
-            srtd_framecounts[k] = framecounts[k]
-            srtd_percentages[k] = percentages[k]
-        return srtd_framecounts, srtd_percentages
+    def compute_statsistics_for_group(label_array1 : list,
+                                      label_array2 : list,
+                                      groupnames : list,
+                                      significance : float,
+                                      savedir : str,
+                                      savename : str,
+                                      data_is_normal : bool,
+                                      equal_var : bool, 
+                                      save_result : bool):
+        """
+        Computes the stats for the two given data arrays.
 
-    group1_labels = [read_BSOID_labeled_csv(csv)[0] for csv in group1]
-    group2_labels = [read_BSOID_labeled_csv(csv)[0] for csv in group2]
+        :param list label_array1: A list of label np.ndarrays for group 1.
+        :param list label_array2: A list of label np.ndarrays for group 2.
+        :param list groupnames: A two-string list of the name of the groups 
+        analyzed, used when saving the result.
+        :param float significance: Level of significance used for comparsion.
+        :param str savedir: Directory to which we save analysis results.
+        :param str savename: Name of the file we save analysis results to.
+        :param bool data_is_normal: Whether the data is normal or not. Use
+        unpaired t-test if True, Mann-Whitney U test if False.
+        :param bool equal_var: Whether the data has equal variance or not. 
+        When data is normal, use unpaired t-test if True, and Welch's t-test
+        if False. When data is not normal, has no effect.
+        :param bool save_result: Whether to save the analysis results.
+
+        :returns tuple (srtd_framecounts1, strd_percentages1): A tuple, the first
+        dict mapping labels to the number of time the label was found in this array,
+        and the second mapping labels to the percentage of the array this label covers.
+        The first tuple is for group 1.
+        :returns tuple (srtd_framecounts2, strd_percentages2): The same tuple as the first
+        but for group 2.
+        :returns dict stats: A dict mapping each label to the statistic found through 
+        comparing the framecount of the two groups.
+        :returns dict pvals: A dict mapping each label to the P-value found through 
+        comparing the framecount of the two groups.
+        """
+        all_results_txt, stats, pvals = "", {}, {}
+        srtd_framecounts1, srtd_percentages1 = extract_framecounts_and_percentages(
+            label_array1, label_groups)
+        srtd_framecounts2, srtd_percentages2 = extract_framecounts_and_percentages(
+            label_array2, label_groups)
+        
+        # compare the mean of the two framecount data for each key
+        common_keys = np.unique(list(srtd_framecounts1.keys()) + 
+                                list(srtd_framecounts2.keys()))
+        for k in common_keys:
+            data1, data2 = srtd_framecounts1[k], srtd_framecounts2[k]
+            
+            statistic, pvalue, result_txt = compare_independent_sample_means(
+                data1=data1, data2=data2, groupnames=groupnames, 
+                significance=significance, savedir=None, savename=None, 
+                data_is_normal=data_is_normal, 
+                equal_var=equal_var, save_result=False
+                )
+            all_results_txt += f"Label: {k}."
+            all_results_txt += result_txt
+            stats[k] = statistic; pvals[k] = pvalue
+        
+        if save_result:
+            savepath = os.path.join(savedir, savename)
+            with open(savepath, 'w') as f:
+                f.write(all_results_txt)
+
+        return (srtd_framecounts1, srtd_percentages1), (srtd_framecounts2, srtd_percentages2), \
+                stats, pvals
+    
+    if type(group1[0]) == str: 
+        group1_labels = [read_BSOID_labeled_csv(csv)[0] for csv in group1]
+    else: group1_labels = group1
+
+    if type(group2[0]) == str: 
+        group2_labels = [read_BSOID_labeled_csv(csv)[0] for csv in group2]
+    else: group2_labels = group2
+    
     # compute statistics
-    total_framecounts1, total_percentages1 = compute_statsistics_for_group(group1_labels)
-    total_framecounts2, total_percentages2 = compute_statsistics_for_group(group2_labels)
-    # compute average percentages
-    avg_percentages1, avg_percentages2 = {},{}
-    for k, v in total_percentages1.items(): avg_percentages1[k] = v / len(group1_labels)
-    for k, v in total_percentages2.items(): avg_percentages2[k] = v / len(group2_labels)
-    # find the union of labels existing in all data
-    all_labels = list(total_framecounts1.keys())
-    [all_labels.append(k) for k in total_framecounts2.keys() if k not in all_labels]
-    all_labels.sort()
+    (framecount1, percentage1), (framecount2, percentage2), stats, pvals = \
+        compute_statsistics_for_group(label_array1=group1_labels, label_array2=group2_labels, 
+                                  groupnames=groupnames, significance=significance, 
+                                  savedir=savedir, savename=savename, 
+                                  data_is_normal=data_is_normal, equal_var=equal_var,
+                                  save_result=save_result)
     
-    return all_labels, (total_framecounts1, avg_percentages1), (total_framecounts2, avg_percentages2)
-    
+    return (framecount1, percentage1), (framecount2, percentage2), stats, pvals
 
+def extract_framecounts_and_percentages(label_array : list,
+                                        label_groups : list=None):
+    """
+    Given a list of label arrays, extract the frame counts and 
+    percentage over all frames for each label specified in label_groups.
+
+    :param list label_array: A list of labels we process.
+    :param list label_groups: A list of all group labels to 
+    examine. Defaults to None - all labels.
+    
+    :returns dict srtd_framecounts: A dict mapping labels to the number of 
+    time the label was found in this array. The keys are ascendingly sorted.
+    :returns dict srtd_percentages: A dict mapping labels to the percentage
+    of the array this label covers. The keys are ascendingly sorted.
+    """
+    framecounts, percentages = {},{}
+    for lbl in label_array:
+        unique_labels, framecount, percentage = compute_time_spent_per_label(
+            label=lbl, label_groups=label_groups)
+        for idx, unique_l in enumerate(unique_labels):
+            fc, perc = framecount[idx].item(), percentage[idx].item()
+            framecounts[unique_l] = framecounts.get(unique_l, []) + [fc]
+            percentages[unique_l] = percentages.get(unique_l, []) + [perc]
+    # resort the label orders
+    sorted_keys = list(framecounts.keys()); sorted_keys.sort()
+    srtd_framecounts, srtd_percentages = {},{}
+    for k in sorted_keys:
+        srtd_framecounts[k] = framecounts[k]
+        srtd_percentages[k] = percentages[k]
+    
+    return srtd_framecounts, srtd_percentages
+
+def compare_independent_sample_means(data1 : np.ndarray, 
+                                     data2 : np.ndarray, 
+                                     groupnames : list,
+                                     significance : float,
+                                     savedir : str,
+                                     savename : str,
+                                     data_is_normal : bool,
+                                     equal_var : bool,
+                                     save_result : bool=True):
+    """
+    Compare two independent sample means, using the Unpaired T-test if the data
+    is normal, or the Mann-Whitney U test if not.
+    :param np.ndarray data1: Data array 1.
+    :param np.ndarray data2: Data array 2.
+    :param list groupnames: The name of the two data groups examined, in order 1 and 2.
+    :param float significance: Significance level for comparison.
+    :param str savedir: Directory to which the result is saved.
+    :param str savename: Name of the saved file.
+    :param bool data_is_normal: Whether the data can be assumed normal. Unpaired
+    T-test if True, Mann-Whitney U test if False.
+    :param bool equal_var: Whether the data has equal variances. If data is normal, 
+    Unpaired t-test when equal_var is True, Welch's t-test otherwise. If data is 
+    not normal, no effect.
+    :param bool save_result: Whether to save the result. Defaults to True.
+
+    :returns float statistic: The statistic value from the examination.
+    :returns float pvalue: The P value obtained from the comparison.
+    :returns str all_results_txt: A text containing analysis result.
+    """
+    all_results_txt = ""
+
+    if data_is_normal:
+        test_res = ttest_ind(data1, data2, equal_var=equal_var)
+    else:
+        test_res = mannwhitneyu(data1, data2, use_continuity=True)
+    
+    significant_result = test_res.pvalue < significance
+    result_txt = f"""
+Examining groups: {groupnames[0]} (n={len(data1)}); {groupnames[1]} (n={len(data2)}).
+Means for {groupnames[0]} and {groupnames[1]} are: {np.mean(data1)}; {np.mean(data2)}.
+Result is {'significant!' if significant_result else 'not significant'}: \
+{test_res.pvalue} {'<' if significant_result else '>'} {significance}.
+"""
+    print(result_txt)
+    all_results_txt += result_txt
+    
+    if save_result:
+        save_to = os.path.join(savedir, savename)
+        print(f"Saving result for groups {', '.join(groupnames)} to: {save_to}...", end="")
+        with open(save_to, 'w') as f:
+            f.write(all_results_txt)
+        print("SUCCESSFUL!")
+
+    return test_res.statistic, test_res.pvalue, all_results_txt
 
 if __name__ == "__main__":
     if False:
