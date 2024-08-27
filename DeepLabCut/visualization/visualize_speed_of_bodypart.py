@@ -1,7 +1,8 @@
 # Author: Akira Kudo
 # Created: 2024/04/12
-# Last Updated: 2024/04/24
+# Last Updated: 2024/08/26
 
+import os
 from typing import Dict, List
 
 import matplotlib
@@ -184,7 +185,11 @@ def visualize_property_of_bodypart_from_csv(
         flag : int,
         start : int,
         end : int,
-        bodyparts2noise : Dict[str, np.ndarray]=None
+        savedir : str,
+        savename : str,
+        bodyparts2noise : Dict[str, np.ndarray]=None,
+        save_figure : bool=True,
+        show_figure : bool=True
         ):
     """
     Visualizes four properties of consecutive movements:
@@ -200,13 +205,18 @@ def visualize_property_of_bodypart_from_csv(
     :param str csv_path: Path to csv holding dlc data.
     :param List[str] bodyparts: List of body part names to visualize.
     :param int flag: A flag indicating which property to visualize.
-    Given { displacement : 0, angle : 1, angle_change : 2, acceleration : 3 },
+    Given { displacement : 0, angle : 1, angle_change : 2, acceleration : 3,
+     4 : (acceleration - displacement) },
     flag is the sum of 2^k for all k to be visualized.
     :param int start: Frame number where to start visualization.
     :param int end: Frame number last shown in the visualization.
+    :param str savedir: Name of the directory to which we save the results.
+    :param str savename: Name of the saved file.
     :param Dict[str,np.ndarray] bodyparts2noise: Dictionary mapping 
     each body part to their identified noise frames, as boolean array.
     If given, which frame is noise is indicated for each body part.
+    :param bool save_figure: Whether to save the resulting figure.
+    :param bool show_figure: Whether to show the resulting figure.
     """
     DISPLACEMENT, ANGLE, ANGLE_CHANGE, ACCELERATION = 'Displacement', 'Angle', 'Angle Change', 'Acceleration'
     ACC_MINUS_DISP = "Acceleration Minus Displacement"
@@ -297,7 +307,11 @@ def visualize_given_property_and_color_noise(
         bodyparts : List[str],
         start : int,
         end : int,
-        bodyparts2noise : Dict[str, np.ndarray]=None
+        savedir : str,
+        savename : str,
+        bodyparts2noise : Dict[str, np.ndarray]=None,
+        save_figure : bool=True,
+        show_figure : bool=True
         ):
     """
     Visualizes properties as specified by name in 'to_render', which data 
@@ -318,9 +332,13 @@ def visualize_given_property_and_color_noise(
     :param List[str] bodyparts: List of body part names to visualize.
     :param int start: Frame number where to start visualization.
     :param int end: Frame number last shown in the visualization.
+    :param str savedir: Name of the directory to which we save the results.
+    :param str savename: Name of the saved file.
     :param Dict[str,np.ndarray] bodyparts2noise: Dictionary mapping 
     each body part to their identified noise frames, as boolean array.
     If given, which frame is noise is indicated for each body part.
+    :param bool save_figure: Whether to save the resulting figure.
+    :param bool show_figure: Whether to show the resulting figure.
     """
     if len(to_render) == 0: return
     if df.shape[0] < end: 
@@ -371,7 +389,11 @@ def visualize_given_property_and_color_noise(
                 ax.tick_params(axis='x', labelbottom=False)
 
     plt.suptitle(f"Body Parts {' & '.join(to_render)} Over Time")
-    plt.show()
+
+    if save_figure:
+        plt.savefig(os.path.join(savedir, savename))
+    if show_figure: plt.show()
+    else: plt.close()
 
 
 # HELPERS 
