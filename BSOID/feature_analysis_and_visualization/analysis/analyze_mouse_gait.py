@@ -1,6 +1,6 @@
 # Author: Akira Kudo
 # Created: 2024/03/31
-# Last updated: 2024/07/16
+# Last updated: 2024/08/09
 
 import os
 
@@ -38,6 +38,8 @@ Take a single csv. From it, we can:
 
 LOCOMOTION_LABELS = [38]
 MOVEMENT_THRESHOLD = 0.5
+FOREPAW, HINDPAW = "forepaw", "hindpaw"
+FOREPAW_PAIR, HINDPAW_PAIR = ["rightforepaw", "leftforepaw"], ["righthindpaw", "lefthindpaw"]
 
 def analyze_mouse_gait(df : pd.DataFrame, 
                        label : np.ndarray, 
@@ -250,8 +252,9 @@ def analyze_mouse_stepsize_per_mousegroup_from_dicts(
     Takes in two groups of dictionaries holding information of step sizes,
     computing whether the mean stepsizes of different body parts are different 
     or not using either unpaired t-test with normally distributed data or 
-    Mann-Whitney U test with non-normally distributed data. 
-    Uses the given significance threshold.
+    Mann-Whitney U test with non-normally distributed data.
+    Uses the given significance threshold, and removes any outlier data before
+    comparison of the mean, using the functionality "remove_outlier_data".
 
     :param list dicts1: List of dictionaries holding stepsize data for the first group.
     :param list dicts2: List of dictionaries holding stepsize data for the second group.
@@ -289,7 +292,8 @@ def analyze_mouse_stepsize_per_mousegroup_from_dicts(
             np.array(all_stepsizes2[bpt]))
 
         if data_is_normal:
-            test_res = ttest_ind(filtered_stepsizes1, filtered_stepsizes2)
+            test_res = ttest_ind(filtered_stepsizes1, filtered_stepsizes2, 
+                                 equal_var=False)
         else:
             test_res = mannwhitneyu(filtered_stepsizes1, filtered_stepsizes2, 
                                     use_continuity=True)
@@ -297,6 +301,7 @@ def analyze_mouse_stepsize_per_mousegroup_from_dicts(
         significant_result = test_res.pvalue < significance
         result_txt = f"""
 Examining groups: {groupnames[0]} (n={len(filtered_stepsizes1)}); {groupnames[1]} (n={len(filtered_stepsizes2)}) for {bpt}.
+Means for {groupnames[0]} and {groupnames[1]} are: {np.mean(filtered_stepsizes1)}; {np.mean(filtered_stepsizes2)}.
 Result is {'significant!' if significant_result else 'not significant'}: \
 {test_res.pvalue} {'<' if significant_result else '>'} {significance}.
 """
@@ -431,8 +436,7 @@ def extract_time_difference_between_consecutive_left_right_contact(
     if save_result:
         yaml_result = yaml.safe_dump(all_results)
         with open(os.path.join(savedir, savename), 'w') as f:
-            f.write(yaml_result)       
-
+            f.write(yaml_result)
 
 # HELPERS
 
@@ -515,7 +519,8 @@ def filter_stepsize_dict_by_locomotion_to_use(dict : dict,
     locomotion sequences to use. Those matching in start and end frames are used.
 
     :returns dict used_locomotions: Dictionary holding step size data specifically for 
-    those locomotion sequences specified to be used.
+    those locomotion sequences specified to be used. The dict will have keys as the 
+    starting frame of a sequence, and the 'end' and stepsize for each limb as values.
     """
     try:
         loc_start_end = locomotion_to_use[mousename]
@@ -560,3 +565,45 @@ def aggregate_stepsize_per_body_part(dictionaries : list,
                 all_stepsizes.extend(filt_stepsize)
         aggregated[bpt] = all_stepsizes
     return aggregated
+
+def aggregate_fore_hind_paw_as_one(pawdict : dict):
+    """
+    Aggregates the fore and hind paws as a single paw for the given
+    paw dict.
+
+    :param dict pawdict: A dictionary where keys are the starting frame
+    of locomotion sequences, and the values are dictionaries of:
+    - keys as 'end', or body part names
+    - values as the ending frame of the sequence for 'end', or another dict
+      which has as key 'diff', 'x_diff' and 'y_diff', and as values the list 
+      of the stepsizes for that body part
+    
+    :return dict: A dictionary where keys are the starting frame of locomotion
+    sequences, and the values are dictionaries of:
+    - keys as 'end', or 'forepaw' and 'hindpaw'
+    - values as the ending frame of the sequence for 'end', or another dict
+      which has as key 'diff', 'x_diff' and 'y_diff', and as values the list 
+      of the stepsizes for that aggregated body part
+    """
+    agg_dict = {}
+    for start, val in pawdict.items():
+        aggregated_val = {}
+        aggregated_val['end'] = val['end']
+        # aggregate fore paw
+        forepaw_agg = {}
+        for bpt in FOREPAW_PAIR:
+            for k, v in val[bpt].items():
+               to_extend = forepaw_agg.get(k, []); to_extend.extend(v)
+               forepaw_agg[k] = to_extend
+        aggregated_val[FOREPAW] = forepaw_agg
+        # aggregate hind paw
+        hindpaw_agg = {}
+        for bpt in HINDPAW_PAIR:
+            for k, v in val[bpt].items():
+                to_extend = hindpaw_agg.get(k, []); to_extend.extend(v)
+                hindpaw_agg[k] = to_extend
+        aggregated_val[HINDPAW] = hindpaw_agg
+        # add it back to the dictionary to be returned
+        agg_dict[start] = aggregated_val
+    
+    return agg_dict
