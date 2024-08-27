@@ -1,6 +1,6 @@
 # Author: Akira Kudo
 # Created: 2024/04/28
-# Last Updated: 2024/06/13
+# Last Updated: 2024/08/07
 
 import os
 
@@ -57,7 +57,8 @@ def carry_out_significance_tests_on_csv(csv_path : str,
             alternative=alternative
             )
         text = f"MWU test on {voi}:\n" + \
-               f"- {mt1} (n={len(tdcm_1)}), {mt2} (n={len(tdcm_2)})\n" + \
+               f"- {mt1} (n={len(tdcm_1)}, mean={np.mean(tdcm_1)}),\n" + \
+               f"  {mt2} (n={len(tdcm_2)}, mean={np.mean(tdcm_2)}))\n" + \
                f"- p={p_val}; Significance level {'not achieved...' if p_val > significance_level else 'achieved!'}"
         print(text)
         return text
@@ -82,11 +83,16 @@ if __name__ == "__main__":
         # r"C:\Users\mashi\Desktop\temp\Q175\basic_analysis\Q175_analysis_data_trunc_unfilt.csv",
         # r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\RaymondLab\OpenField\3part1 MatlabAndPrismAnalysis\MATLAB\openfield_photometry_30min_DLC\data\results\2024_05_28_new_mice_Q175_analysis_data_unfilt.csv"
         # r"C:\Users\mashi\Desktop\temp\YAC128\basic_analysis\YAC128_analysis_data_trunc_unfilt_NONMOVINGMOUSE_DROPPED.csv",
-        r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\RaymondLab\OpenField\3part1 MatlabAndPrismAnalysis\MATLAB\openfield_photometry_30min_DLC\data\results\Q175_BrownNBlack_analysis_data_filt.csv"
+        # r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\RaymondLab\OpenField\3part1 MatlabAndPrismAnalysis\MATLAB\openfield_photometry_30min_DLC\data\results\Q175_BrownNBlack_analysis_data_filt.csv"
+        r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\RaymondLab\OpenField\3part1 MatlabAndPrismAnalysis\MATLAB\openfield_photometry_30min_DLC\data\results\OutlierRemoved\NoOutlier_YAC128_analysis_data_filt.csv"
     ]
+
+    SAVEDIR = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\DLC\YAC128\fig\basicAnalysisNo535m1_153m2"
 
     SIGNIFICANCE_LEVEL = 0.05
 
     for csv_path in CSV_PATHS:
         carry_out_significance_tests_on_csv(csv_path=csv_path, 
-                                            significance_level=SIGNIFICANCE_LEVEL)
+                                            significance_level=SIGNIFICANCE_LEVEL,
+                                            savedir=SAVEDIR,
+                                            savename="MannWhitneyU_Comparison_BasicAnalysis.txt")

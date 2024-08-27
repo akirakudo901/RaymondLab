@@ -1,14 +1,16 @@
 # Author: Akira Kudo
 # Created: 2024/04/28
-# Last Updated: 2024/06/14
+# Last Updated: 2024/08/06
 
 import os
 
 import numpy as np
 import pandas as pd
+from scipy.stats import mannwhitneyu
+import yaml
 
 from visualization.visualize_data_in_dot_and_whisker_plot import visualize_data_in_dot_and_whisker_plot_from_dataframe, visualize_data_per_individual_in_quadrants, FILENAME, CENTERTIME_BY_INTERVALS, TIME_FRACTION_BY_QUADRANT, DISTANCE_BY_INTERVALS
-from visualization.visualize_data_in_scatter_dot_plot import visualize_data_in_scatter_dot_plot_from_dataframe, CENTER_TIME, TOTAL_DISTANCE_CM
+from visualization.visualize_data_in_scatter_dot_plot import visualize_data_in_scatter_dot_plot_from_dataframe, CENTER_TIME, FILENAME, MOUSETYPE, TOTAL_DISTANCE_CM
 from visualization.visualize_individual_timeseries_data import visualize_individual_timeseries_data_from_csv, visualize_individual_timeseries_data_from_dataframe, normalize_distanceByIntervals, RENAMED_DISTBYINTER_NORM
 
 def do_visualize_dlc_basic_analysis_in_plot(csvfile : str,
@@ -103,65 +105,70 @@ def do_visualize_dlc_basic_analysis_in_plot(csvfile : str,
         if not os.path.exists(fullpath_sexfolder):
             os.mkdir(fullpath_sexfolder)
         
-        for visualized_var, x_vals, xlabel, var_name, fig_name in to_visualize_with_dot_and_whisker:
-            visualize_data_in_dot_and_whisker_plot_from_dataframe(
-                df=sex_diff_df,
-                x_vals=x_vals,
-                y_vals=visualized_var,
-                xlabel=xlabel,
-                ylabel=var_name,
-                title=f"{var_name} Per Mouse Type ({mouse_groupname}, {sex})",
-                colors=colors,
-                save_figure=save_figure,
-                save_dir=fullpath_sexfolder,
-                save_name=fig_name,
-                show_figure=show_figure
-                )
+        if True:
+            for visualized_var, x_vals, xlabel, var_name, fig_name in to_visualize_with_dot_and_whisker:
+                visualize_data_in_dot_and_whisker_plot_from_dataframe(
+                    df=sex_diff_df,
+                    x_vals=x_vals,
+                    y_vals=visualized_var,
+                    xlabel=xlabel,
+                    ylabel=var_name,
+                    title=f"{var_name} Per Mouse Type ({mouse_groupname}, {sex})",
+                    colors=colors,
+                    save_figure=save_figure,
+                    save_dir=fullpath_sexfolder,
+                    save_name=fig_name,
+                    show_figure=show_figure
+                    )
         
-        for visualized_var, x_vals, xlabel, var_name, fig_name in to_visualize_with_individuals_in_quadrants:
-            visualize_data_per_individual_in_quadrants(csvfile,
-                                                x_vals=x_vals,
-                                                y_vals=visualized_var,
-                                                xlabel=xlabel,
-                                                ylabel=var_name,
-                                                title=f"{var_name} Per Mouse Type ({mouse_groupname})",
-                                                colors=colors,
-                                                save_figure=save_figure,
-                                                save_dir=fullpath_sexfolder,
-                                                save_name=fig_name,
-                                                show_figure=show_figure, 
-                                                vmin=0, vmax=100) # quadrant by percentage!
-
-        for visualized_var, var_name, fig_name in to_visualize_scatter:
-            visualize_data_in_scatter_dot_plot_from_dataframe(sex_diff_df,
-                                                y_val=visualized_var,
-                                                xlabel=f'Mouse Type',
-                                                ylabel=var_name,
-                                                title=f"{var_name} Per Mouse Type ({mouse_groupname}, {sex})",
-                                                colors=colors,
-                                                sex_marker=['.', 'x'],
-                                                save_figure=save_figure,
-                                                save_dir=fullpath_sexfolder,
-                                                save_name=fig_name,
-                                                # show_figure=show_figure, TODO FIX
-                                                show_figure=True, #TODO FIX
-                                                show_mean=True,
-                                                show_median=True,
-                                                side_by_side=sex_side_by_side)
+        if True:
+            for visualized_var, x_vals, xlabel, var_name, fig_name in to_visualize_with_individuals_in_quadrants:
+                visualize_data_per_individual_in_quadrants(csvfile,
+                                                    x_vals=x_vals,
+                                                    y_vals=visualized_var,
+                                                    xlabel=xlabel,
+                                                    ylabel=var_name,
+                                                    title=f"{var_name} Per Mouse Type ({mouse_groupname})",
+                                                    colors=colors,
+                                                    save_figure=save_figure,
+                                                    save_dir=fullpath_sexfolder,
+                                                    save_name=fig_name,
+                                                    show_figure=show_figure, 
+                                                    vmin=0, vmax=100) # quadrant by percentage!
         
-        for visualized_var, x_vals, xlabel, var_name, fig_name in to_visualize_individuals_as_timeseries:
-            visualize_individual_timeseries_data_from_dataframe(
-                df=sex_diff_df,
-                x_vals=x_vals,
-                y_vals=visualized_var,
-                xlabel=xlabel,
-                ylabel=var_name,
-                title=f"{var_name} Per Mouse Type ({mouse_groupname}, {sex})",
-                colors=colors,
-                save_figure=save_figure,
-                save_dir=fullpath_sexfolder,
-                save_name=fig_name,
-                show_figure=show_figure)    
+        if True:
+            for visualized_var, var_name, fig_name in to_visualize_scatter:
+                visualize_data_in_scatter_dot_plot_from_dataframe(sex_diff_df,
+                                                    y_val=visualized_var,
+                                                    xlabel=f'Mouse Type',
+                                                    ylabel=var_name,
+                                                    title=f"{var_name} Per Mouse Type ({mouse_groupname}, {sex})",
+                                                    colors=colors,
+                                                    # sex_marker=['.', 'x'],
+                                                    sex_marker=['.', '.'],
+                                                    save_figure=save_figure,
+                                                    save_dir=fullpath_sexfolder,
+                                                    save_name=fig_name,
+                                                    # show_figure=show_figure, TODO FIX
+                                                    show_figure=True, #TODO FIX
+                                                    show_mean=True,
+                                                    show_median=True,
+                                                    side_by_side=sex_side_by_side)
+        
+        if True:
+            for visualized_var, x_vals, xlabel, var_name, fig_name in to_visualize_individuals_as_timeseries:
+                visualize_individual_timeseries_data_from_dataframe(
+                    df=sex_diff_df,
+                    x_vals=x_vals,
+                    y_vals=visualized_var,
+                    xlabel=xlabel,
+                    ylabel=var_name,
+                    title=f"{var_name} Per Mouse Type ({mouse_groupname}, {sex})",
+                    colors=colors,
+                    save_figure=save_figure,
+                    save_dir=fullpath_sexfolder,
+                    save_name=fig_name,
+                    show_figure=show_figure)    
 
 if __name__ == "__main__":
     def render_figures_for_group(mouse_groupname):
@@ -196,7 +203,7 @@ if __name__ == "__main__":
     # render_figures_for_group("Q175")
     # render_figures_for_group("YAC128")
 
-    if True:
+    if False:
         MOUSE_GROUPNAME = "Q175"
         SAVE_DIR = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\DLC\{}\fig\basicAnalysis{}".format(
             MOUSE_GROUPNAME, "AllMice")
@@ -253,7 +260,7 @@ if __name__ == "__main__":
     
     if False:
         MOUSE_GROUPNAME = "YAC128"
-        WHICH_MICE = "AllMice" if True else "No535m1_153m2"
+        WHICH_MICE = "AllMice" if False else "No535m1_153m2"
         
         SAVE_DIR = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\DLC\{}\fig\basicAnalysis{}".format(
             MOUSE_GROUPNAME, WHICH_MICE)
@@ -284,3 +291,64 @@ if __name__ == "__main__":
                                                     colors=colors,
                                                     save_figure=True,
                                                     show_figure=False)
+    
+    # compare the weights of YACs and WTs
+    if True:
+        WEIGHT_YAML = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\RaymondLab\YAC128_Weights_from_RaymondLab.yaml"
+
+        FIGURE_SAVING_PATH = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\DLC\YAC128\fig\pawInk\fig_workTermReport"
+        
+        WT, HD = "WT", "YAC128"
+        WEIGHT = "Weight"
+        MOUSENAME = "MouseName"
+        # significance with Mann Whitney U
+        SIGNIFICANCE = 0.05
+        SAVE_COMPARISON_RESULT = True
+        
+        with open(WEIGHT_YAML, 'r') as f:
+            yaml_content = f.read()
+        content = yaml.safe_load(yaml_content)
+
+        wt_weights = list(content['WT'].values())
+        hd_weights = list(content['YAC128'].values())
+        
+        all_weights = wt_weights + hd_weights
+        mousetypes = [WT] * len(wt_weights) + [HD] * len(hd_weights)
+
+        df = pd.DataFrame(data={FILENAME : list(content['WT'].keys()) + list(content['YAC128'].keys()), 
+                                WEIGHT : all_weights, 
+                                MOUSETYPE : mousetypes})
+        
+        if False:
+            visualize_data_in_scatter_dot_plot_from_dataframe(
+                df=df,
+                y_val=WEIGHT,
+                xlabel='Mouse Type',
+                ylabel="Weight",
+                title=f"Weight Per Mouse Type (YAC128, Male)",
+                colors=["black", "pink"],
+                # sex_marker=['.', 'x'],
+                sex_marker=['.', '.'],
+                save_figure=True,
+                save_dir=FIGURE_SAVING_PATH,
+                save_name=f"YAC128_Subset_Weight_ScatterPlot.png",
+                show_figure=False,
+                show_mean=True,
+                show_median=True,
+                side_by_side=False
+                )
+        
+        # do a statistical analysis using the Mann Whitney U
+        if True:
+            _, p_val = mannwhitneyu(wt_weights, hd_weights)
+            
+            result_text = f"MWU test on {WEIGHT}:\n" + \
+                f"- {WT} (n={len(wt_weights)}, mean={np.mean(wt_weights)}),\n" + \
+                f"  {HD} (n={len(hd_weights)}, mean={np.mean(hd_weights)}))\n" + \
+                f"- p={p_val}; Significance level {'not achieved...' if p_val > SIGNIFICANCE else 'achieved!'}"
+            print(result_text)
+
+            if SAVE_COMPARISON_RESULT:
+                COMPARISON_RESULT_SAVENAME = "YAC128_Weight_Comparison_MannWhitneyU_Result.txt"
+                with open(os.path.join(FIGURE_SAVING_PATH, COMPARISON_RESULT_SAVENAME), 'w') as f:
+                    f.write(result_text)

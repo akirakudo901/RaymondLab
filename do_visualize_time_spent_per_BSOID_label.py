@@ -31,13 +31,22 @@ if __name__ == "__main__":
         FIGURE_SAVING_PATH = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\BSOID\Q175\Apr082024\figures"
     
     groupnames = [HD_GROUPNAME, WT_GROUPNAME]
+
+    EXCLUDED_MICE = ["308535m1", "312153m2"]
+
+    def is_excluded_mice(path : str, mousenames : list=EXCLUDED_MICE):
+        for mousename in mousenames:
+            if mousename in path.replace('_', ''):
+                print(f"File {path} is to be excluded as it matches the mouse name: {mousename}.")
+                return True
+        return False
     
     HD_CSVS = [os.path.join(HD_CSV_DIR, file) 
                 for file in os.listdir(HD_CSV_DIR) 
-                if file.endswith(".csv")]
+                if (file.endswith(".csv") and not is_excluded_mice(file))]
     WT_CSVS = [os.path.join(WT_CSV_DIR, file) 
                 for file in os.listdir(WT_CSV_DIR) 
-                if file.endswith(".csv")]
+                if (file.endswith(".csv") and not is_excluded_mice(file))]
 
 
     # visualize the average time spent by mice in each 'meta label'

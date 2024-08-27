@@ -1,6 +1,6 @@
 # Author: Akira Kudo
 # Created: 2024/03/21
-# Last Updated: 2024/06/10
+# Last Updated: 2024/08/26
 
 import os
 
@@ -58,7 +58,7 @@ def create_behavior_bits_from_filtered_label(
 
 if __name__ == "__main__":
     FPS = 40
-    FILTERING_NOISE_MAX_LENGTH = 5 # max length of noise filtered via filter_bouts_smaller_than_N_frames
+    FILTERING_NOISE_MAX_LENGTH = 0 # max length of noise filtered via filter_bouts_smaller_than_N_frames
     MIN_DESIRED_BOUT_LENGTH = 500
     COUNTS = 2
     OUTPUT_FPS = 20
@@ -73,19 +73,20 @@ if __name__ == "__main__":
     
     STOP_UPON_MISSING_VIDEO = False
     
-    MOUSEGROUP = "Q175" if False else ("Q175_Black" if True else "Q175")
+    MOUSEGROUP = "Q175" if False else ("Q175_Black" if False else "YAC128")
     
     #####DEFINING OUTPUT FOLDER#####
+    output_dirname = f"filterlen{FILTERING_NOISE_MAX_LENGTH}"
     if MOUSEGROUP == "Q175":
-        OUTPUT_FOLDER = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\BSOID\Q175\Apr082024\labeled_behavior_bits\filterlen5\allmice"
+        OUTPUT_FOLDER = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\BSOID\Q175\Apr082024\labeled_behavior_bits\\" + output_dirname + r"\allmice"
         VIDEO_FOLDER = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\DLC\Q175\videos"
     elif MOUSEGROUP == "Q175_Black":
-        OUTPUT_FOLDER = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\BSOID\Q175\Apr082024\labeled_behavior_bits\filterlen5\black"
+        OUTPUT_FOLDER = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\BSOID\Q175\Apr082024\labeled_behavior_bits\\" + output_dirname + r"\black"
         VIDEO_FOLDER = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\DLC\Q175\videos\blackmice"
     elif MOUSEGROUP == "YAC128":
-        OUTPUT_FOLDER = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\BSOID\YAC128\Feb232023\labeled_behavior_bits\filterlen5"
+        OUTPUT_FOLDER = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\BSOID\YAC128\Feb232023\labeled_behavior_bits\\" + output_dirname 
         VIDEO_FOLDER = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\DLC\YAC128\videos"
-
+    
     #####DEFINING OTHER IMPORTANT FOLDERS#####
     FRAME_DIR = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\BSOID\results\pngs"
 
@@ -111,7 +112,6 @@ if __name__ == "__main__":
             r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\DLC\Q175\csv\allcsv_2024_05_16_Akira\WT_filt"
         ]
     elif MOUSEGROUP == "Q175_Black":
-        # TO BE FIXED START
         labelfile_folders = [
             # HD_filt labeled feature
             r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\BSOID\Q175\labeled_features\black\it0-2000k\HD_filt",
@@ -125,7 +125,6 @@ if __name__ == "__main__":
             # WT_filt csvs
             r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\DLC\Q175\csv\black\it0-2000k\WT_filt"
         ]
-        # TO BE FIXED END
     elif MOUSEGROUP == "YAC128":
         labelfile_folders = [
             # HD_filt labeled feature
@@ -136,9 +135,9 @@ if __name__ == "__main__":
 
         dlcfile_folders = [    
             # HD_filt csvs
-            r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\DLC\YAC128\csv\allcsv_2024_05_16_Akira\HD_filt",
+            r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\DLC\YAC128\csv\all_2024May16_Akira\filt\HD_filt",
             # WT_filt csvs
-            r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\DLC\YAC128\csv\allcsv_2024_05_16_Akira\WT_filt"
+            r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\DLC\YAC128\csv\all_2024May16_Akira\filt\WT_filt"
         ]
 
     labelfiles = [os.path.join(folder, file) for folder in labelfile_folders 
@@ -171,7 +170,7 @@ if __name__ == "__main__":
             else:
                 print(f"Video for mouse {get_mousename(lblfl)} not found...")
 
-        labels = read_BSOID_labeled_features(lblfl)[0]
+        labels, _ = read_BSOID_labeled_features(lblfl)
 
         framedir = os.path.join(FRAME_DIR, get_mousename(lblfl))
         if not os.path.exists(framedir):
@@ -183,19 +182,21 @@ if __name__ == "__main__":
         else:
             continue
 
-        create_behavior_bits_from_filtered_label(
-            labels=labels,
-            crit=MIN_DESIRED_BOUT_LENGTH / FPS, 
-            counts=COUNTS,
-            output_fps=OUTPUT_FPS, 
-            frame_dir=framedir,
-            output_path=outputpath,
-            video_path=video_path,
-            data_csv_path=dlcfl,
-            dotsize=DOTSIZE,
-            colormap=COLORMAP,
-            bodyparts2plot=BODYPARTS,
-            trailpoints=TRAILPOINTS,
-            choose_from_top_or_random=TOP_OR_RANDOM,
-            n=FILTERING_NOISE_MAX_LENGTH
-            )
+        # create bouts with varying filter length (0~4)
+        for filter_noise_max_length in range(5):
+            create_behavior_bits_from_filtered_label(
+                labels=labels,
+                crit=MIN_DESIRED_BOUT_LENGTH / FPS, 
+                counts=COUNTS,
+                output_fps=OUTPUT_FPS, 
+                frame_dir=framedir,
+                output_path=outputpath,
+                video_path=video_path,
+                data_csv_path=dlcfl,
+                dotsize=DOTSIZE,
+                colormap=COLORMAP,
+                bodyparts2plot=BODYPARTS,
+                trailpoints=TRAILPOINTS,
+                choose_from_top_or_random=TOP_OR_RANDOM,
+                n=filter_noise_max_length
+                )

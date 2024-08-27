@@ -1,6 +1,6 @@
 # Author: Akira Kudo
 # Created: 2024/04/03
-# Last Updated: 2024/05/25
+# Last Updated: 2024/08/23
 
 import os
 
@@ -11,6 +11,9 @@ import tqdm
 from bsoid_io.utils import read_BSOID_labeled_csv, read_BSOID_labeled_features
 from feature_analysis_and_visualization.analysis.analyze_time_spent_per_label import analyze_time_spent_per_label_between_groups, compute_time_spent_per_label, compute_time_spent_per_label_per_group_from_csvs
 from feature_analysis_and_visualization.utils import get_mousename
+from feature_analysis_and_visualization.behavior_groups import BehaviorGrouping
+from label_behavior_bits.preprocessing import filter_bouts_smaller_than_N_frames
+
 
 
 def compute_time_spent_per_label_for_list_of_csv_and_save(
@@ -131,7 +134,7 @@ if __name__ == "__main__":
             groups=groups, group_names=group_names,
             savedir=SAVE_DIR, savename="time_spent_per_label_per_file_YAC128_WT.csv")
 
-    if True:
+    if False:
         import os
         Q175_FOLDER = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\BSOID\Q175\labeled_features\allcsv_2024_05_16_Akira"
         YAC_FOLDER = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\BSOID\YAC128\labeled_features\allcsv_2024_05_16_Akira"
@@ -156,3 +159,93 @@ if __name__ == "__main__":
             save_path=SAVE_PATH,
             label_groups=None,
             save_csv=True)
+    
+    # statistically compare the mean of the frame counts for
+    # two groups of labels
+    if True:
+        # parameters
+        SIGNIFICANCE = 0.05
+        SAVEDIR = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\BSOID\results\framecount_genotype"
+
+        EXCLUDED_MICE = ["308535m1", "312153m2"]
+
+        def is_excluded_mice(path : str, mousenames : list=EXCLUDED_MICE):
+            for mousename in mousenames:
+                if mousename in path.replace('_', ''):
+                    print(f"File {path} is to be excluded as it matches the mouse name: {mousename}.")
+                    return True
+            return False
+
+        if True: 
+            groupnames = ["YAC128", "FVB"]
+            HD_CSV_DIR = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\BSOID\YAC128\labeled_features\\" + \
+                r"allcsv_2024_05_16_Akira\HD_filt"
+            WT_CSV_DIR = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\BSOID\YAC128\labeled_features\\" + \
+                r"allcsv_2024_05_16_Akira\WT_filt"
+        else:
+            groupnames = ["Q175", "B6"]
+            HD_CSV_DIR = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\BSOID\Q175\labeled_features\\" + \
+                r"allcsv_2024_06_20_Akira\HD_filt"
+            WT_CSV_DIR = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\BSOID\Q175\labeled_features\\" + \
+                r"allcsv_2024_06_20_Akira\WT_filt"
+        
+        HD_CSVS = [os.path.join(HD_CSV_DIR, file) 
+                   for file in os.listdir(HD_CSV_DIR) 
+                   if (file.endswith(".csv") and not is_excluded_mice(file))]
+        WT_CSVS = [os.path.join(WT_CSV_DIR, file) 
+                   for file in os.listdir(WT_CSV_DIR) 
+                   if (file.endswith(".csv") and not is_excluded_mice(file))]
+        
+        # comparison of the original labels
+        if False:
+            SAVENAME = f"framecount_mean_comparison_per_group_per_genotype_{'_'.join(groupnames)}.txt"
+
+            analyze_time_spent_per_label_between_groups(group1=HD_CSVS,
+                                                        group2=WT_CSVS,
+                                                        groupnames=groupnames, 
+                                                        significance=SIGNIFICANCE, 
+                                                        savedir=SAVEDIR,
+                                                        savename=SAVENAME,
+                                                        data_is_normal=False,
+                                                        equal_var=False,
+                                                        label_groups=None, 
+                                                        save_result=True)
+        
+        # comparison in terms of the meta labels
+        if True:
+            
+            def convert_label_to_int_metalabel(label : np.ndarray, 
+                                               behavior_grouping : BehaviorGrouping):
+                return np.fromiter([behavior_grouping.label_to_behavioral_group_int(val) 
+                                    for val in label],
+                                    dtype=np.int32)
+
+            NETWORK_NAME = 'Feb-23-2023'
+            YAML_PATH = r'X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\RaymondLab\BSOID\feature_analysis_and_visualization\behavior_groups_Akira_Reviewed.yml'
+            FILTER_MIN_SIZE = 5
+
+            
+            HD_LABELS = [filter_bouts_smaller_than_N_frames(label=read_BSOID_labeled_features(csv)[0], n=FILTER_MIN_SIZE) 
+                         for csv in HD_CSVS]
+            WT_LABELS = [filter_bouts_smaller_than_N_frames(label=read_BSOID_labeled_features(csv)[0], n=FILTER_MIN_SIZE) 
+                         for csv in WT_CSVS]
+
+            bg = BehaviorGrouping(network_name=NETWORK_NAME, yaml_path=YAML_PATH)
+            groupings = bg.load_behavior_groupings(network_name=NETWORK_NAME, yaml_path=YAML_PATH)
+
+            # convert the labels into integer meta labels
+            HD_METALABELS = [convert_label_to_int_metalabel(lbl, bg) for lbl in HD_LABELS]
+            WT_METALABELS = [convert_label_to_int_metalabel(lbl, bg) for lbl in WT_LABELS]
+
+            SAVENAME = f"METALABEL_framecount_mean_comparison_per_group_per_genotype_{'_'.join(groupnames)}_Reviewed.txt"
+
+            analyze_time_spent_per_label_between_groups(group1=HD_METALABELS,
+                                                        group2=WT_METALABELS,
+                                                        groupnames=groupnames, 
+                                                        significance=SIGNIFICANCE, 
+                                                        savedir=SAVEDIR,
+                                                        savename=SAVENAME,
+                                                        data_is_normal=False,
+                                                        equal_var=False,
+                                                        label_groups=None, 
+                                                        save_result=True)

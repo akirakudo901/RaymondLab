@@ -1,6 +1,6 @@
 # Author: Akira Kudo
 # Created: 2024/04/01
-# Last updated: 2024/07/22
+# Last updated: 2024/08/06
 
 import os
 import shutil
@@ -17,7 +17,7 @@ sys.path.append(r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\Raymond
 sys.path.append(r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\RaymondLab\DeepLabCut")
 
 from BSOID.bsoid_io.utils import read_BSOID_labeled_csv, read_BSOID_labeled_features
-from BSOID.feature_analysis_and_visualization.analysis.analyze_mouse_gait import aggregate_stepsize_per_body_part, analyze_mouse_gait, analyze_mouse_stepsize_per_mousegroup_from_dicts, extract_average_line_between_paw, extract_time_difference_between_consecutive_left_right_contact, filter_stepsize_dict_by_locomotion_to_use, identify_curved_trajectory, remove_outlier_data
+from BSOID.feature_analysis_and_visualization.analysis.analyze_mouse_gait import aggregate_fore_hind_paw_as_one, aggregate_stepsize_per_body_part, analyze_mouse_gait, analyze_mouse_stepsize_per_mousegroup_from_dicts, extract_average_line_between_paw, extract_time_difference_between_consecutive_left_right_contact, filter_stepsize_dict_by_locomotion_to_use, identify_curved_trajectory, remove_outlier_data, FOREPAW, FOREPAW_PAIR, HINDPAW, HINDPAW_PAIR
 from BSOID.feature_analysis_and_visualization.visualization.visualize_mouse_gait import filter_nonpawrest_motion, read_stepsize_yaml, select_N_locomotion_sequences, visualize_mouse_gait_speed_of_specific_sequences, visualize_mouse_paw_rests_in_locomomotion, visualize_stepsize_in_locomotion_in_multiple_mice, visualize_time_between_consecutive_landings, COL_START, STEPSIZE_MIN
 from BSOID.label_behavior_bits.preprocessing import filter_bouts_smaller_than_N_frames
 
@@ -86,19 +86,22 @@ def main(label_path : str, dlc_path : str,
     
     # make visualizations of the rests in question
     if False:
-        visualize_mouse_paw_rests_in_locomomotion(df=filtered_df,
-                                            label=filt_label,
-                                            bodyparts=bodyparts,
-                                            savedir=savedir,
-                                            savename=savename,
-                                            averaged=True,
-                                            annotate_framenum=True,
-                                            length_limits=length_limits,
-                                            plot_N_runs=float("inf"),
-                                            locomotion_label=locomotion_label,
-                                            threshold=threshold,
-                                            save_figure=True, 
-                                            show_figure=False)
+        render_in_line_bpts = ['rightforepaw', 'righthindpaw', 'leftforepaw', 'lefthindpaw']
+        for line_bpt in render_in_line_bpts:
+            visualize_mouse_paw_rests_in_locomomotion(df=filtered_df,
+                                                    label=filt_label,
+                                                    bodyparts=bodyparts,
+                                                    savedir=savedir,
+                                                    savename=savename,
+                                                    also_render_in_line=[line_bpt, ],
+                                                    averaged=True,
+                                                    annotate_framenum=True,
+                                                    length_limits=length_limits,
+                                                    plot_N_runs=float("inf"),
+                                                    locomotion_label=locomotion_label,
+                                                    threshold=threshold,
+                                                    save_figure=True, 
+                                                    show_figure=False)
         
     # create the yaml files holding step size
     if False:
@@ -252,7 +255,7 @@ def main(label_path : str, dlc_path : str,
 if __name__ == "__main__":
 
     # shared constants
-    THRESHOLD = 0.75 # DETERMINE A GOOD VALUE!
+    THRESHOLD = 0.5 # DETERMINE A GOOD VALUE!
     LENGTH_LIMITS = (60, None)
 
     if True: # YAC128
@@ -265,8 +268,8 @@ if __name__ == "__main__":
                           for csv_folder in ABOVE_LABEL_CSVS]
         
         ABOVE_DLC_CSVS = [
-            r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\DLC\YAC128\csv\allcsv_2024_05_16_Akira\filt\HD_filt",
-            r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\DLC\YAC128\csv\allcsv_2024_05_16_Akira\filt\WT_filt"
+            r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\DLC\YAC128\csv\all_2024May16_Akira\filt\HD_filt",
+            r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\DLC\YAC128\csv\all_2024May16_Akira\filt\WT_filt"
         ]
         LABEL_DLC_PATHS = []; [LABEL_DLC_PATHS.extend([os.path.join(csv_folder, file)
                                              for file in os.listdir(csv_folder) if file.endswith('.csv')]) 
@@ -274,7 +277,8 @@ if __name__ == "__main__":
         
         LOCOMOTION_LABEL = [38]
 
-        SAVEDIR = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\DLC\YAC128\fig\pawInk\{}"
+        # SAVEDIR = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\DLC\YAC128\fig\pawInk\{}"
+        SAVEDIR = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\DLC\YAC128\fig\pawInk\fig_workTermReport"
 
         # the following are for step size analysis
         ABOVE_STEPSIZE_FOLDER = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\DLC\YAC128\fig\pawInk"
@@ -391,7 +395,7 @@ if __name__ == "__main__":
 
         WT_GROUPNAME, HD_GROUPNAME = "B-6", "Q175"
 
-    if True:
+    if False:
         # identify which locomotion sequence to use based on STEPS_TO_USE
         with open(STEPS_TO_USE, 'r') as f:
             content = f.read()
@@ -435,7 +439,12 @@ if __name__ == "__main__":
                     sequences=sequences_to_use_for_this_mouse)
     
     # analyze whether the different groups have significant differences 
-    if False:
+    if True:
+        ANALYZE_AGGREGATED_FORE_HIND = False
+
+        if ANALYZE_AGGREGATED_FORE_HIND: 
+            ALL_PAWS = ["forepaw", "hindpaw"]
+        
         # obtain all yamls of interest
         wtyaml = [os.path.join(ABOVE_STEPSIZE_FOLDER, folder, yaml) 
                   for folder in [os.path.join(ABOVE_STEPSIZE_FOLDER, fol) 
@@ -443,14 +452,14 @@ if __name__ == "__main__":
                                  if os.path.isdir(os.path.join(ABOVE_STEPSIZE_FOLDER, fol)) and 
                                  fol in WT_MICE]
                   for yaml in os.listdir(os.path.join(ABOVE_STEPSIZE_FOLDER, folder))
-                  if yaml.endswith(".yaml")]
+                  if yaml.endswith(".yaml") and yaml.startswith("pawRestDistanceOverTime")]
         hdyaml = [os.path.join(ABOVE_STEPSIZE_FOLDER, folder, yaml) 
                   for folder in [os.path.join(ABOVE_STEPSIZE_FOLDER, fol) 
                                  for fol in os.listdir(ABOVE_STEPSIZE_FOLDER) 
                                  if os.path.isdir(os.path.join(ABOVE_STEPSIZE_FOLDER, fol)) and 
                                  fol in HD_MICE]
                   for yaml in os.listdir(os.path.join(ABOVE_STEPSIZE_FOLDER, folder))
-                  if yaml.endswith(".yaml")]
+                  if yaml.endswith(".yaml") and yaml.startswith("pawRestDistanceOverTime")]
         
         # filter based on STEPS_TO_USE
         with open(STEPS_TO_USE, 'r') as f:
@@ -467,6 +476,10 @@ if __name__ == "__main__":
                     mousename=get_mousename(yaml),
                     locomotion_to_use=locomotion_to_use) 
                 for yaml in hdyaml]
+        
+        if ANALYZE_AGGREGATED_FORE_HIND:
+            wtdicts = [aggregate_fore_hind_paw_as_one(d) for d in wtdicts]
+            hddicts = [aggregate_fore_hind_paw_as_one(d) for d in hddicts]
         
         # check for normality with q-q plots / for equality of variances
         if True:
@@ -485,20 +498,21 @@ if __name__ == "__main__":
                 return stepsizes
             
             def pad_stepsizes(stepsizes : dict):
+                padded_stepsizes = {}
                 maxlen = max([len(ss) for ss in stepsizes.values()])
                 for key, val in stepsizes.items():
                     pad = np.empty(maxlen - len(val)); pad.fill(np.nan)
-                    stepsizes[key] = np.concatenate((val, pad))
-                return stepsizes
+                    padded_stepsizes[key] = np.concatenate((val, pad))
+                return padded_stepsizes
                 
             wt_no_outlier = remove_outlier(wt_stepsizes)
             hd_no_outlier = remove_outlier(hd_stepsizes)
             
-            # wt_padded_no_outlier = pad_stepsizes(wt_no_outlier)
-            # hd_padded_no_outlier = pad_stepsizes(hd_no_outlier)
+            wt_padded_no_outlier = pad_stepsizes(wt_no_outlier)
+            hd_padded_no_outlier = pad_stepsizes(hd_no_outlier)
             
             # Q-Q plot
-            if False:
+            if True:
                 # make the data frame
                 for mousetype, stepsizes in zip(["YAC128", "FVB"], 
                                                 [hd_padded_no_outlier, wt_padded_no_outlier]):
@@ -506,7 +520,7 @@ if __name__ == "__main__":
                     visualize_qq_plot_from_dataframe(df=df,
                                                     columns=ALL_PAWS,
                                                     save_dir=SELECTED_SAVEDIR,
-                                                    save_prefix="Selected",
+                                                    save_prefix="Selected" + ("_Aggregated" if ANALYZE_AGGREGATED_FORE_HIND else ""),
                                                     mousetype=mousetype,
                                                     dist=None,
                                                     dist_name="Standard Normal",
@@ -516,30 +530,73 @@ if __name__ == "__main__":
                                                     show_figure=False)
             
             # compare the variances
-            if False:
+            def compare_variance_of_stepsizes(stepsize_dict1, 
+                                              stepsize_dict2,
+                                              groupnames : list,
+                                              bodyparts : list,
+                                              savedir : str,
+                                              savename : str,
+                                              print_result : bool=True,
+                                              alpha : float=0.05,
+                                              save_result : bool=True):
+                all_results = ""
+
+                for bpt in bodyparts:
+                    result_txt = ""
+
+                    stepsizes1, stepsizes2 = stepsize_dict1[bpt], stepsize_dict2[bpt]
+                    _, pvalue = levene(stepsizes1, stepsizes2, center='median')
+
+                    result_txt += f"P-value for Brown-Forsythe test for {bpt}:\n"
+                    result_txt += f"- {groupnames[0]} (n={len(stepsizes1)}, SD={np.std(stepsizes1)}):\n"
+                    result_txt += f"- {groupnames[1]} (n={len(stepsizes2)}, SD={np.std(stepsizes2)}):\n"
+                    result_txt += f"- {pvalue} {'<' if pvalue < alpha else '>'} {alpha}!\n"
+                    all_results += result_txt
+                    if print_result: print(result_txt)
+
+                if save_result:
+                    fullpath = os.path.join(savedir, savename)
+                    print(f"Saving result of variance comparsion to: {fullpath}...", end="")
+                    with open(fullpath, 'w') as f:
+                        f.write(all_results)
+                    print("SUCCESSFUL!")
+                
+            if True:
+                GROUPNAMES = ["WT", "YAC128"]
+                SAVENAME = f"selected_NoOutlier_VarianceComparisonResult_{'_'.join(GROUPNAMES)}.txt"
+                if ANALYZE_AGGREGATED_FORE_HIND:
+                    SAVENAME = f"selected_NoOutlier_AggregateForeHind_VarianceComparisonResult_{'_'.join(GROUPNAMES)}.txt"
                 ALPHA = 0.05
-                for bpt in ALL_PAWS:
-                    
-                    statistic, pvalue = levene(wt_no_outlier[bpt], hd_no_outlier[bpt], 
-                                               center='median')
-                    print(f"P-value for Brown-Forsythe test for {bpt}:")
-                    print(f"- {pvalue} {'<' if pvalue < ALPHA else '>'} {ALPHA}!")
+                compare_variance_of_stepsizes(wt_no_outlier, 
+                                              hd_no_outlier,
+                                                groupnames=GROUPNAMES,
+                                                bodyparts=ALL_PAWS,
+                                                savedir=SAVEDIR,
+                                                savename=SAVENAME,
+                                                print_result=True,
+                                                alpha=ALPHA,
+                                                save_result=True)
 
-
+        
         # compare the mean
-        if True:
-            save_path = os.path.join(os.path.dirname(SAVEDIR), 
-                                    "Selected_Welch_mouseStepSizeAverageComparison.txt")
-            
+        if False:
+            savename = "Selected_Welch_mouseStepSizeAverageComparison.txt"
+            if ANALYZE_AGGREGATED_FORE_HIND:
+                savename = "Selected_Welch_AggregateForeHind_mouseStepSizeAverageComparison.txt"
+            save_path = os.path.join(os.path.dirname(SAVEDIR), savename)
+
             analyze_mouse_stepsize_per_mousegroup_from_dicts(
                 dicts1=wtdicts, dicts2=hddicts, groupnames=[WT_GROUPNAME, HD_GROUPNAME],
                 bodyparts=ALL_PAWS,
-                # uses unpaired-t if true, mann whitney u if false
-                data_is_normal=False, 
+                # uses Welch's t if true, mann-whitney u if false
+                data_is_normal=True, 
                 significance=0.05,
                 save_result=True,
                 save_to=save_path
                 )
+    
+        # redefine since we've changed this earlier 
+        ALL_PAWS = ["rightforepaw", "righthindpaw", "leftforepaw", "lefthindpaw"]
             
     # visualize content of YAMLs containing time difference between consecutive landing
     # of specific body pairs (e.g. left / right paws) 

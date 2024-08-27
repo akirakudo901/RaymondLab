@@ -1,6 +1,6 @@
 # Author: Akira Kudo
 # Created: 2024/05/17
-# Last Updated: 2024/07/23
+# Last Updated: 2024/08/09
 
 import os
 
@@ -10,7 +10,7 @@ import pandas as pd
 import yaml
 
 from bsoid_io.utils import read_BSOID_labeled_features
-from feature_analysis_and_visualization.analysis.analyze_mouse_gait import aggregate_stepsize_per_body_part, filter_stepsize_dict_by_locomotion_to_use, remove_outlier_data
+from feature_analysis_and_visualization.analysis.analyze_mouse_gait import aggregate_stepsize_per_body_part, aggregate_fore_hind_paw_as_one, filter_stepsize_dict_by_locomotion_to_use, remove_outlier_data, FOREPAW, HINDPAW
 from feature_analysis_and_visualization.utils import get_mousename
 from feature_analysis_and_visualization.visualization.visualize_mouse_gait import read_stepsize_yaml, visualize_locomotion_stats, visualize_mouse_gait_speed, visualize_stepsize_standard_deviation_per_mousegroup, visualize_stepsize_in_locomotion, visualize_stepsize_in_locomotion_in_multiple_mice, visualize_stepsize_in_locomotion_in_single_mouse, visualize_stepsize_in_locomotion_in_mice_groups, STEPSIZE_MIN
 from label_behavior_bits.preprocessing import filter_bouts_smaller_than_N_frames
@@ -33,6 +33,7 @@ if True:
     PLOT_N_RUNS = float("inf")
 
     ABOVE_FOLDER = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\DLC\YAC128\fig\pawInk"
+    SAVEDIR = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\DLC\YAC128\fig\pawInk\fig_workTermReport"
 
     WT_MICE = [
         # Male
@@ -284,19 +285,23 @@ if True:
             if "YAC128" in ABOVE_FOLDER:
                 if True:
                     GROUPNAMES = ["YAC128", "FVB"]
+                    GROUPCOLORS = ["pink", "grey"]
                     DICTGROUPS = [hd_dicts, wt_dicts]
                     
                 else:
                     GROUPNAMES = ["Male YAC128-FVB", "Female YAC128-FVB"]
+                    GROUPCOLORS = ["cyan", "pink"]
                     DICTGROUPS = [male_dicts, wt_dicts]
             
             # Q175
             elif "Q175" in ABOVE_FOLDER:
                 if True:
                     GROUPNAMES = ["Q175", "B6"]
+                    GROUPCOLORS = ["red", "blue"]
                     DICTGROUPS = [hd_dicts, wt_dicts]
                 else:
                     GROUPNAMES = ["Male Q175-B6", "Female Q175-B6"]
+                    GROUPCOLORS = ["cyan", "pink"]
                     DICTGROUPS = [male_dicts, wt_dicts]
             
 
@@ -311,12 +316,13 @@ if True:
                             dictionaries=dicts, bodyparts=ALL_PAWS, cutoff=STEPSIZE_MIN)
                         for key, val in merged_dict.items():
                             merged_dict[key] = {"diff" : remove_outlier_data(np.array(val))}
+                        merged_dict["end"] = None
                         no_outlier_dicts.append([{"dummy" : merged_dict}]) # dummy level to make compatible
                         # with visualizing code that follows
 
                 if REMOVE_OUTLIERS:
                     title = f"Distribution of Step Size During Locomotion \nNo Outliers ({', '.join(GROUPNAMES)}) - Binsize={BINSIZE}"
-                    savename = f"selected_NoOutlier_HalfBinsize_LocomotionStepSizeDistributionPerMouseGroup_{'_'.join(GROUPNAMES)}"
+                    savename = f"selected_NoOutlier_LocomotionStepSizeDistributionPerMouseGroup_{'_'.join(GROUPNAMES)}"
                 else:
                     title = f"Distribution of Step Size During Locomotion \nWith Outliers ({', '.join(GROUPNAMES)}) - Binsize={BINSIZE}"
                     savename = f"selected_WithOutlier_LocomotionStepSizeDistributionPerMouseGroup_{'_'.join(GROUPNAMES)}"
@@ -325,17 +331,29 @@ if True:
                     stepsize_groups=no_outlier_dicts,
                     groupnames=GROUPNAMES,
                     title=title,
-                    savedir=ABOVE_FOLDER,
+                    savedir=SAVEDIR,
                     savename=savename,
+                    group_colors=GROUPCOLORS,
                     binsize=BINSIZE,
                     show_figure=False,
                     save_figure=True
                 )
                 print("PROCESSING MICE GROUPED TOGETHER DONE!")
-        
-            if True:
-                BODYPARTS = ALL_PAWS
 
+            # visualize the standard deviation of step sizes
+            if True:
+                ALSO_ANALYZE_FORE_HINDPAWS_AGGREGATED = True
+                BODYPARTS = ALL_PAWS
+                # parameters for SD figure making
+                SIGNIFICANCE = 0.05
+                COLORS = ["pink", "black"]
+                DATA_IS_NORMAL = False
+                SHOW_MEAN = True
+                SHOW_MOUSENAME = False
+                SAVE_FIGURE = False
+                SHOW_FIGURE = False
+                SAVE_MEAN_COMPARISON_RESULT = False
+                
                 print("Processing SD of step sizes per group!")
                 if REMOVE_OUTLIERS:
                     # remove any outlier before visualizing
@@ -347,32 +365,57 @@ if True:
                                 merged_dict = {}
                                 for bpt in BODYPARTS:
                                     merged_dict[bpt] = {"diff" : np.array([])}
+                                merged_dict['end'] = None
                             else:
                                 merged_dict = aggregate_stepsize_per_body_part(
                                     dictionaries=[d], bodyparts=ALL_PAWS, cutoff=STEPSIZE_MIN)
                                 for key, val in merged_dict.items():
                                     merged_dict[key] = {"diff" : remove_outlier_data(np.array(val))}
+                                merged_dict['end'] = None
                                 
                             no_outlier_dicts.append({"dummy" : merged_dict}) # dummy level to make compatible
                             # with visualizing code that follows
                         dictgroups_no_outlier.append(no_outlier_dicts)
 
+                
+                savename = f"selected_NoOutlier_LocomotionStepSizeStandardDevPerMouseGroup_{'_'.join(GROUPNAMES)}"
+
                 visualize_stepsize_standard_deviation_per_mousegroup(
                     stepsize_groups=dictgroups_no_outlier,
                     mousenames=[hd_micename, wt_micename],
-                    groupnames=GROUPNAMES,
-                    data_is_normal=False,
-                    significance=0.05,
-                    colors=["pink", "black"],
-                    bodyparts=BODYPARTS, 
+                    groupnames=GROUPNAMES, data_is_normal=DATA_IS_NORMAL,
+                    significance=SIGNIFICANCE, colors=COLORS, bodyparts=BODYPARTS, 
                     savedir=ABOVE_FOLDER,
-                    savename=f"selected_NoOutlier_LocomotionStepSizeStandardDevPerMouseGroup_{'_'.join(GROUPNAMES)}",
+                    savename=savename,
                     # cutoff : float=STEPSIZE_MIN,
-                    show_mean=True,
-                    show_mousename=True,
-                    save_figure=False,
-                    show_figure=False,
-                    save_mean_comparison_result=True
+                    show_mean=SHOW_MEAN,
+                    show_mousename=SHOW_MOUSENAME,
+                    save_figure=SAVE_FIGURE,
+                    show_figure=SHOW_FIGURE,
+                    save_mean_comparison_result=SAVE_MEAN_COMPARISON_RESULT
                     )
                 
+                if ALSO_ANALYZE_FORE_HINDPAWS_AGGREGATED:
+                    aggregated_dict_groups = [[aggregate_fore_hind_paw_as_one(d) 
+                                              for d in dictgroup]
+                                              for dictgroup in dictgroups_no_outlier]
+                    visualize_stepsize_standard_deviation_per_mousegroup(
+                        stepsize_groups=aggregated_dict_groups,
+                        mousenames=[hd_micename, wt_micename],
+                        groupnames=GROUPNAMES, data_is_normal=DATA_IS_NORMAL,
+                        significance=SIGNIFICANCE, colors=COLORS, 
+                        bodyparts=[FOREPAW, HINDPAW], 
+                        savedir=ABOVE_FOLDER,
+                        savename=savename,
+                        # cutoff : float=STEPSIZE_MIN,
+                        show_mean=SHOW_MEAN,
+                        show_mousename=SHOW_MOUSENAME,
+                        save_figure=SAVE_FIGURE,
+                        show_figure=SHOW_FIGURE,
+                        save_mean_comparison_result=SAVE_MEAN_COMPARISON_RESULT
+                        )
+                
                 print("PROCESSING STEP SIZE PER MOUSE GROUP DONE!")
+    
+        if True:
+            all_micename
