@@ -1,6 +1,6 @@
 # Author: Akira Kudo
 # Created: 2024/03/21
-# Last Updated: 2024/05/29
+# Last Updated: 2024/08/23
 
 import os
 from typing import List
@@ -21,6 +21,7 @@ def quantify_label_occurrence_and_length_distribution(
         group_names : List[str],
         save_dir : str,
         save_name : str,
+        label_to_name : dict=None,
         use_logscale : bool=False,
         save_figure : bool=True,
         show_figure : bool=True
@@ -38,6 +39,8 @@ def quantify_label_occurrence_and_length_distribution(
     :param str save_dir: Path to the directory to save figures.
     :param str save_name: Name of file to given when saving it, png. Will append the
     description of each generated figure when saving.
+    :param dict label_to_name: A dict mapping labels to their name to be displayed on
+    the figure.
     :param bool use_logscale: Whether to use log scale for y-axis of visualization.
     :param bool save_figure: Whether to save figures. Defaults to True.
     :param bool show_figure: Whether to show figures. Defaults to True.
@@ -69,6 +72,10 @@ def quantify_label_occurrence_and_length_distribution(
             sorted_unique_labels = [ul for _, ul, _ in sorted_pairs]
             sorted_unique_label_counts = [ulc for ulc, _, _ in sorted_pairs]
             sorted_color_per_label = [cpl for _, _, cpl in sorted_pairs]
+            # if given, rename the labels using label_to_name
+            if label_to_name is not None:
+                sorted_unique_labels = [label_to_name[ul.item()] 
+                                        for ul in sorted_unique_labels]
             # finally plot a bar graph for it
             ax.bar(range(len(sorted_unique_label_counts)), 
                 sorted_unique_label_counts, 
@@ -153,6 +160,7 @@ def visualize_label_occurrences_heatmaps(
         mousenames : List[List[str]],
         labels_to_check : List[str],
         ylabel : str,
+        display_threshold : float,
         save_dir : str,
         save_name : str,
         vmin : float=None,
@@ -177,6 +185,9 @@ def visualize_label_occurrences_heatmaps(
     :param List[int] labels_to_check: List of integer indicating which label groups
     to consider when storing their time spent, defaults to all labels.
     :param str ylabel: Label for y-axis.
+    :param float display_threshold: A threshold in percentage. Any label with 
+    occurrence less than this value in any of the mice is not displayed to 
+    improve visibility.
     :param str save_dir: Directory for saving figure.
     :param str save_name: Name of saved figure.
     :param float vmin: Minimum value to which we anchor the heatmap, defaults 
@@ -216,9 +227,8 @@ def visualize_label_occurrences_heatmaps(
         individual_mousenames = group_individuals[MOUSENAME].str.replace(
             '_', '').drop_duplicates()
         group_columns = df.columns[np.logical_not(np.isin(df.columns, [MOUSENAME, GROUPNAME]))]
-        # here, we exclude any label occurring less than THRESHOLD to increase visibility
-        THRESHOLD = 5
-        all_entry_less_than_thresh = np.any(df.loc[PERCENTAGE, group_columns] > THRESHOLD, axis=0)
+        # we exclude any label occurring less than display_threshold to increase visibility
+        all_entry_less_than_thresh = np.any(df.loc[PERCENTAGE, group_columns] > display_threshold, axis=0)
         group_columns = group_columns[all_entry_less_than_thresh]
         label_occurrences = group_individuals.loc[PERCENTAGE, group_columns]
         # create a heatmap where each row is an individual and
@@ -345,6 +355,55 @@ def visualize_group_average_label_occurrences(
     else:
         plt.close()
 
+def quantify_max_percentage_per_mouse_per_labels(labels : list,
+                                                 mousenames : list,
+                                                 label_groups : list,
+                                                 savedir : str,
+                                                 savename : str,
+                                                 threshold : float=3.0,
+                                                 show_message : bool=True,
+                                                 save_result : bool=True):
+    max_percentages = {}
+
+    # create a data frame holding information on label occurrence
+    all_labels_combined = np.concatenate(labels)
+    df = compute_time_spent_per_label_per_group_from_numpy_array(
+        nparray_groups=[[lbl] for lbl in labels] + [[all_labels_combined]],
+        mousenames=[[msnm] for msnm in mousenames] + [["All"]],
+        group_names=mousenames + ["All"],
+        save_path=None,
+        label_groups=label_groups,
+        save_csv=False, show_message=True
+        )
+    # compute the maximum percentage of label coverage in all mice for each label
+    perc_df = df.loc[PERCENTAGE]
+    for col in perc_df.columns:
+        if col != MOUSENAME and col != GROUPNAME:
+            max_perc = np.max(perc_df.loc[PERCENTAGE, col])
+            max_percentages[col] = max_perc
+    
+    result_message = "Maximum percentage in mice & percentage across all mice:\n"
+    for grpname, perc in max_percentages.items():
+        perc_across_all_mice = perc_df[perc_df[MOUSENAME] == "All"].loc[PERCENTAGE, grpname]
+        result_message += f"-{grpname}: {perc}; {perc_across_all_mice}\n"
+    
+    result_message += f"\n Entries with less then {threshold}% max in any mouse are:"
+    total_perc_below_thresh = 0
+    for grpname, perc in max_percentages.items():
+        if perc < threshold:
+            result_message += f"{grpname.replace('group', '')}({round(perc, 2)}); "
+            perc_across_all_mice = perc_df[perc_df[MOUSENAME] == "All"].loc[PERCENTAGE, grpname]
+            total_perc_below_thresh += perc_across_all_mice
+    
+    result_message += f"\nThese groups total {round(total_perc_below_thresh, 2)}% of all labels!"
+    
+    if show_message:
+        print(result_message)
+        
+    if save_result:
+        savepath = os.path.join(savedir, savename)
+        with open(savepath, 'w') as f:
+            f.write(result_message)
 
 if __name__ == "__main__":
     LABEL_NUMPY_DIR = r"Z:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\RaymondLab\BSOID_related\feature_extraction\results"
