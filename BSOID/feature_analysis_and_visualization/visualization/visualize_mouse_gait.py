@@ -1,6 +1,6 @@
 # Author: Akira Kudo
 # Created: 2024/03/31
-# Last updated: 2024/07/29
+# Last updated: 2024/08/08
 
 import os
 
@@ -533,8 +533,10 @@ def visualize_stepsize_in_locomotion_in_mice_groups(
     """
     # for each body part in question, we create a separate figure
     for bpt, bpt_title in zip(
-        ['rightforepaw',   'leftforepaw',   'righthindpaw',   'lefthindpaw'  ], 
-        ['Right Fore Paw', 'Left Fore Paw', 'Right Hind Paw', 'Left Hind Paw']
+        ['rightforepaw',   'leftforepaw',   'righthindpaw',   'lefthindpaw',
+         analyze_mouse_gait.FOREPAW, analyze_mouse_gait.HINDPAW], 
+        ['Right Fore Paw', 'Left Fore Paw', 'Right Hind Paw', 'Left Hind Paw',
+         'Fore Paw',                 'Hind Paw'                ]
         ):
         _, axes = plt.subplots(len(groupnames), 1)
         min_stepsize, max_stepsize = float("inf"), float("-inf")
@@ -553,13 +555,19 @@ def visualize_stepsize_in_locomotion_in_mice_groups(
                 yaml_contents = [read_stepsize_yaml(yml) for yml in stepsizes]
             else:
                 yaml_contents = stepsizes
-            merged_yaml = {}
+            merged_dict = {}
             
             for yaml_idx, content in enumerate(yaml_contents):
                 for key, val in content.items():
-                    merged_yaml[f'{key}_{yaml_idx}'] = val
+                    merged_dict[f'{key}_{yaml_idx}'] = val
+            
+            # also create a dict where forepaws and hindpaws are each aggregated
+            if bpt in [analyze_mouse_gait.FOREPAW, analyze_mouse_gait.HINDPAW]:
+                merged_dict = analyze_mouse_gait.aggregate_fore_hind_paw_as_one(
+                    pawdict=merged_dict
+                    )
                 
-            extrema = visualize_stepsize_in_locomotion(stepsize_info=merged_yaml,
+            extrema = visualize_stepsize_in_locomotion(stepsize_info=merged_dict,
                                                        bodyparts=[bpt],
                                                        title=groupname,
                                                        color=groupcolor, 
@@ -818,7 +826,9 @@ def visualize_stepsize_standard_deviation_per_mousegroup(stepsize_groups : list,
     
         significant_result = test_res.pvalue < significance
         result_txt = f"""
-Examining groups: {groupnames[0]} (n={len(filtered_stepsizes1)}); {groupnames[1]} (n={len(filtered_stepsizes2)}) for {bpt}.
+Examining groups for {bpt}: 
+- {groupnames[0]} (n={len(filtered_stepsizes1)}, mean={np.mean(filtered_stepsizes1)})
+- {groupnames[1]} (n={len(filtered_stepsizes2)}, mean={np.mean(filtered_stepsizes2)})
 Result is {'significant!' if significant_result else 'not significant'}: \
 {test_res.pvalue} {'<' if significant_result else '>'} {significance}.
 """
@@ -928,7 +938,24 @@ def visualize_time_between_consecutive_landings(yamls : list,
     visualize_time_difference_per_pair_for_all(all_landings=[read_consecutive_landing_time_yaml(yaml)
                                                              for yaml in yamls], 
                                             binsize=binsize)
-        
+
+def visualize_different_gait_types(df : pd.DataFrame,
+                                   sequences : tuple,
+                                   bodyparts : list):
+    """
+    _summary_
+
+    :param pd.DataFrame df: A data frame holding DLC data.
+    :param tuple sequences: _description_
+    """
+
+    """
+    Try and visualize different components:
+    1) Top & Bot speed
+    2) Range of speeds, in histogram?
+    3) Type of speeds and how often they happen
+    """
+
         
 
 
@@ -1156,3 +1183,54 @@ def read_consecutive_landing_time_yaml(file : str):
         yaml_content = f.read()
     content = yaml.safe_load(yaml_content)
     return content
+
+def visualize_max_min_speed(df : pd.DataFrame,
+                            sequences : tuple,
+                            bodyparts : list,
+                            savedir : str,
+                            savename : str,
+                            binsize : int=10,
+                            save_figure : bool=True,
+                            show_figure : bool=True):
+    all_max_spd, all_min_spd = [], []
+    for bpt in bodyparts:
+        x, y = df.loc[bpt, 'x'].to_numpy(), df.loc[start:end, 'y'].to_numpy()
+        speed = np.sqrt(np.diff(x)**2 + np.diff(y)**2)
+
+        for start, end in sequences:
+            seq_speed = speed[start:(end-1)+1]
+            max_spd, min_spd = np.max(seq_speed), np.min(seq_speed)
+            all_max_spd.append(max_spd); all_min_spd.append(min_spd)
+    
+    _, axes = plt.subplots(2, 1)
+    max_ax, min_ax = axes[0], axes[1]
+    # maximum
+    max_bins = range(np.min(all_max_spd), np.max(all_max_spd), binsize)
+    max_ax.set_title("Max (speed/pixel)")
+    max_ax.hist(all_max_spd, bins=max_bins)
+    # minimum
+    min_bins = range(np.min(all_min_spd), np.max(all_min_spd), binsize)
+    min_ax.set_title("Min (speed/pixel)")
+    min_ax.hist(all_min_spd, bins=min_bins)
+
+    if save_figure:
+        plt.savefig(os.path.join(savedir, savename))
+    
+    if show_figure: plt.show()
+    else: plt.close()
+    
+    return all_max_spd, all_min_spd
+
+def visualize_speed_range(df : pd.DataFrame,
+                            sequences : tuple,
+                            bodyparts : list):
+    spd_range = None
+    return spd_range
+
+def visualize_speed_bin_frequencies(df : pd.DataFrame,
+                                    sequences : tuple,
+                                    speed_ranges : tuple,
+                                    bodyparts : list):
+    # to be determined after visualizing the ranges of 
+    # speeds to check
+    return None
