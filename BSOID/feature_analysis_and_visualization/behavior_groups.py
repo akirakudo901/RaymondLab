@@ -1,6 +1,6 @@
 # Author: Akira Kudo
 # Created: 2024/03/27
-# Last updated: 2024/03/27
+# Last updated: 2024/08/30
 
 """
 Given bigger 'groups' of behavior above labels, such as:
@@ -11,11 +11,11 @@ Visually and statistically compare different features,
 """
 
 import os
+from typing import Union
 
 import yaml
 
-YAML_FILENAME = "behavior_groups.yml"
-YAML_PATH = os.path.join(os.path.dirname(__file__), YAML_FILENAME)
+YAML_PATH = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\SortedForMarja\MetaLabel\behavior_groups_Akira.yml"
 
 class BehaviorGrouping:
 
@@ -25,7 +25,7 @@ class BehaviorGrouping:
         
     def load_behavior_groupings(self, network_name : str, yaml_path : str=YAML_PATH):
         """
-        Loads the behavior groupings from a yaml file - which is groups 
+        Loads the behavior groupings from a yaml file - which groups 
         behavior labels from a B-SOID network into subgroups based on 
         visual inspection.
         Groups would be of higher abstraction, such as 'rest', 'locomotion', etc.
@@ -90,7 +90,7 @@ class BehaviorGrouping:
         else:
             return self.label_to_groups_int[label]
 
-    def behavioral_group_to_label(self, behavioral_group : str | int):
+    def behavioral_group_to_label(self, behavioral_group : Union[str, int]):
         """
         :returns List[int]: Returns the corresponding labels, or 
         an empty list if not in the dictionary.
@@ -120,5 +120,5 @@ if __name__ == "__main__":
     bg = BehaviorGrouping(network_name=NETWORK_NAME, yaml_path=YAML_PATH)
     groupings = bg.load_behavior_groupings(network_name=NETWORK_NAME, yaml_path=YAML_PATH)
     print(groupings)
-    print(f"32: {bg.label_to_behavioral_group(32)}")
-    print(f"38: {bg.label_to_behavioral_group(38)}")
+    print(f"32: {bg.label_to_behavioral_group_str(32)}; {bg.label_to_behavioral_group_int(32)}")
+    print(f"38: {bg.label_to_behavioral_group_str(38)}; {bg.label_to_behavioral_group_int(38)}")
