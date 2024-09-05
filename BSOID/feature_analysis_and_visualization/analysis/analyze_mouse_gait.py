@@ -1,6 +1,6 @@
 # Author: Akira Kudo
 # Created: 2024/03/31
-# Last updated: 2024/08/09
+# Last updated: 2024/09/04
 
 import os
 
@@ -316,8 +316,139 @@ Result is {'significant!' if significant_result else 'not significant'}: \
 
     return test_res.statistic, test_res.pvalue
 
+def extract_stride_time(
+        df : pd.DataFrame,
+        label : np.ndarray,
+        sequences : list,
+        bodyparts : list,
+        savedir : str,
+        savename : str,
+        ignore_close_paw : float=None,
+        locomotion_label : list=LOCOMOTION_LABELS,
+        save_result : bool=True,
+        ):
+    """
+    Extracts the difference in time betwen two consecutive landing of the specified body part. 
+    Consecutive landings are identified as steps taken temporarily in succession.
+    E.g. If bpt lands at [1,5,10,12,15], stride time are:
+    [5-1,10-5,12-10,15-12] = [4,5,2,3]
+
+    :param pd.DataFrame df: Data frame holding DLC data.
+    :param np.ndarray label: B-SOID labels to identify locomotion.
+    :param list sequences: A list of tuples of two floats, each tuple being
+    the start and end of a locomotion sequence we want to analyze.
+    :param list bodyparts: A list of body parts we want to analyze stride time for.
+    :param str savedir: Directory to where we save results.
+    :param str savename: Name of the saved file.
+    :param float ignore_close_paw: How close consecutive paws must be in order
+    to be ignored as a single paw, defaults to None
+    :param list locomotion_label: A list of labels indicating locomotion for B-SOID
+    labels, defaults to LOCOMOTION_LABELS
+    :param bool save_result: Whether to save the result, defaults to True
+    """
+    # TODO FINISH
+    # get the distance between consecutive steps & get the averaged data frame
+    df, avg_df = filter_nonpawrest_motion(
+        df=df, label=label, show_nonpaw=True, threshold=MOVEMENT_THRESHOLD, 
+        locomotion_labels=locomotion_label, average_pawrest=True,
+        ignore_close_paw=ignore_close_paw
+        )
+    
+    # for each identified locomotion bouts
+    for (start, end) in sequences:
+        # for each of the considered body part
+        for bpt in bodyparts:
+            result = {}
+
+            steps = avg_df[(avg_df[COL_START] >= start) &
+                           (avg_df[COL_START] <=   end) &
+                           (avg_df[COL_BODYPART] == bpt)]
+            
+    #         # for each entry in step_starts1, we find the next start value
+    #         # as well -> then we find the minimum value in step_starts2 that 
+    #         # resides between this start and the next, keeping record
+    #         opposite_steps_forward = find_opposite_steps(
+    #             main_stepstarts=step_starts1, opposite_stepstarts=step_starts2
+    #             )
+    #         opposite_steps_backward = find_opposite_steps(
+    #             main_stepstarts=step_starts2, opposite_stepstarts=step_starts1
+    #             )
+            
+    #         time_diff_forward  = np.array(opposite_steps_forward) - step_starts1
+    #         time_diff_backward = np.array(opposite_steps_backward) - step_starts2
+            
+    #         result[f'{pair[0]}_{pair[1]}'] = time_diff_forward.tolist()
+    #         result[f'{pair[1]}_{pair[0]}'] = time_diff_backward.tolist()
+    #     result["end"] = end
+    #     all_results[start] = result
+    
+    # if save_result:
+    #     yaml_result = yaml.safe_dump(all_results)
+    #     with open(os.path.join(savedir, savename), 'w') as f:
+    #         f.write(yaml_result)
+
+def analyze_consecutive_left_right_contact_time_per_mousegroup(
+        group1_dicts : list,
+        group2_dicts : list,
+        groupnames : list,
+        significance : float,
+        savedir : str,
+        savename : str,
+        save_result : bool=True,
+        show_result : bool=True
+):
+    result_text = ""
+
+    for d in group1_dicts: 
+        if len(d) != 0:
+            example_dict = d
+    bpt_pairs = [pair for pair in example_dict[next(iter(example_dict.keys()))].keys()
+                 if pair != "end"]
+
+    def read_contact_time_dict(d : dict):
+        result_dict = {}
+        for pair in bpt_pairs:
+            pair_contact_times = []
+            # extract the contact times for each body pair, removing any nan
+            for val in d.values():
+                [pair_contact_times.append(v) 
+                 for v in val[pair] 
+                 if ~np.isnan(v)]
+            result_dict[pair] = pair_contact_times
+        return result_dict
+    
+    # read and unite results for each group
+    group1_all_results, group2_all_results = {}, {}
+    for group_dicts, group_results in zip([group1_dicts, group2_dicts],
+                                          [group1_all_results, group2_all_results]):
+        for d in group_dicts:
+            result = read_contact_time_dict(d)
+            for pair in result.keys():
+                pair_stride_times = group_results.get(pair, [])
+                pair_stride_times.extend(result[pair])
+                group_results[pair] = pair_stride_times
+
+    for pair in group1_all_results.keys():
+        times1, times2 = group1_all_results[pair], group2_all_results[pair]
+        # compare the result using mean comparsion with unpaired t-test
+        _, p_val = ttest_ind(times1, times2, equal_var=False)
+
+        result_text += f"Examining pair: {pair}.\n"
+        result_text += f"Examining groups: {groupnames[0]} (n={len(times1)}; mean={np.mean(times1)}),"
+        result_text += f"{groupnames[1]} (n={len(times2)}; mean={np.mean(times2)})\n"
+        result_text += f"p={p_val}{'<' if p_val < significance else '>'}{significance};"
+        result_text += f"Significance {'achieved!' if p_val < significance else 'not achieved...'}\n"
+    
+    if show_result:
+        print(result_text)
+    if save_result:
+        fullpath = os.path.join(savedir, savename)
+        with open(fullpath, 'w') as f:
+            f.write(result_text)
+
+
 def extract_time_difference_between_consecutive_left_right_contact(
-        df : pd.DataFrame, 
+        df : pd.DataFrame,
         label : np.ndarray,
         sequences : list,
         savedir : str,
@@ -438,6 +569,73 @@ def extract_time_difference_between_consecutive_left_right_contact(
         with open(os.path.join(savedir, savename), 'w') as f:
             f.write(yaml_result)
 
+def extract_mean_and_standard_deviation_of_mouse_step_size(
+        dicts : list,
+        mousenames : list,
+        bodyparts : list,
+        savedir : str,
+        savename : str,
+        cutoff : float=STEPSIZE_MIN,
+        save_result : bool=True
+        ):
+    """
+    Takes in dictionaries holding information of mouse step sizes,
+    computing the mean and standard deviation for stepsizes of each dictionary, 
+    for the specified body parts. Any step size below cutoff, and "outlier" step size 
+    identified using "remove_outlier_data", are removed before computing the sample statistics.
+
+    :param list dicts: List of dictionaries holding stepsize data.
+    :param list mousenames: The name of the mice, matching that of the dicts.
+    :param list bodyparts: The body parts we compare.
+    :param str savedir: Directory to which we save the result.
+    :param str savename: Name of the file to which we save the result.
+    :param float cutoff: A cutoff for the minimum step size considered a step, 
+    defaults to STEPSIZE_MIN
+    :param bool save_result: Whether to save computed results in a text file, 
+    defaults to True
+    """
+
+    if len(dicts) != len(mousenames):
+        raise Exception(f"dicts' and mousenames'lengths must be equal, but were {len(dicts)} and {len(mousenames)} instead...")
+    
+    aggregated_dicts = [aggregate_stepsize_per_body_part(
+        dictionaries=[d], bodyparts=bodyparts, cutoff=cutoff)
+        for d in dicts]
+    
+    filtered_dicts = [
+        dict([
+            (bpt,
+             remove_outlier_data(np.array(agg_dict[bpt])))
+             for bpt in bodyparts
+             ])
+        for agg_dict in aggregated_dicts
+        ]
+    
+    # populate an array with data
+    data_arr = []
+    for bpt in bodyparts:
+        for filt_dict, mname in zip(filtered_dicts, mousenames):
+            filtered_stepsizes = filt_dict[bpt]
+            # deal with trivial case where no step sizes were saved
+            if len(filtered_stepsizes) == 0:
+                mean_ss, sd_ss = np.nan, np.nan
+            else:
+                mean_ss, sd_ss = np.mean(filtered_stepsizes), np.std(filtered_stepsizes)
+            
+            data_arr.append(
+                [mname, bpt, mean_ss, sd_ss]
+            )
+    # create a data frame off that array
+    df = pd.DataFrame(data=data_arr,
+                      columns=["mousename", "bodypart", "mean", "SD"])
+        
+    if save_result:
+        full_savepath = os.path.join(savedir, savename)
+        print(f"Saving result for mouse-wise step size mean and SD to: {full_savepath}...", end="")
+        df.to_csv(full_savepath)
+        print("SUCCESSFUL!")
+
+
 # HELPERS
 
 def remove_outlier_data(data : np.array):
@@ -449,6 +647,9 @@ def remove_outlier_data(data : np.array):
 
     :returns np.ndarray filtered: A filtered numpy array.
     """
+    # trivial case where data is empty
+    if len(data) == 0: return data
+
     IQR_MULTIPLIER = 1.5
     # exclude clear outliers beyond 1.5 IQR above 75 & below 25 percentile
     percentiles = np.percentile(data, [25, 75])
@@ -580,15 +781,15 @@ def aggregate_fore_hind_paw_as_one(pawdict : dict):
     
     :return dict: A dictionary where keys are the starting frame of locomotion
     sequences, and the values are dictionaries of:
-    - keys as 'end', or 'forepaw' and 'hindpaw'
+    - keys as 'end', or all original keys + 'forepaw' and 'hindpaw'
     - values as the ending frame of the sequence for 'end', or another dict
       which has as key 'diff', 'x_diff' and 'y_diff', and as values the list 
       of the stepsizes for that aggregated body part
     """
     agg_dict = {}
     for start, val in pawdict.items():
-        aggregated_val = {}
-        aggregated_val['end'] = val['end']
+        # add the original body parts & 'end'
+        aggregated_val = val
         # aggregate fore paw
         forepaw_agg = {}
         for bpt in FOREPAW_PAIR:
