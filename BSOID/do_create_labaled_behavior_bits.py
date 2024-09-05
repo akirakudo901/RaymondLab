@@ -1,6 +1,6 @@
 # Author: Akira Kudo
 # Created: 2024/03/21
-# Last Updated: 2024/08/26
+# Last Updated: 2024/08/27
 
 import os
 
@@ -22,7 +22,8 @@ def create_behavior_bits_from_filtered_label(
         bodyparts2plot,
         trailpoints,
         choose_from_top_or_random, 
-        n : int
+        n : int,
+        overwrite : bool=False
         ):
     """
     :param labels: 1D array, labels from training or testing
@@ -37,6 +38,8 @@ def create_behavior_bits_from_filtered_label(
     top N 'counts' in terms of length. If not "random", chooses the top 'counts'.
     :param int n: The length of the filtering width. Uses filter_bouts_smaller_than_N_frames
     to do the filtering (check out its specification for details!)
+    :param bool overwrite: Whether to overwrite videos that exist already of the same name.
+    Defaults to False.
     """
     print("Pre-filtering...")
     filtered = filter_bouts_smaller_than_N_frames(labels, n=n)
@@ -54,7 +57,8 @@ def create_behavior_bits_from_filtered_label(
                                 colormap=colormap,
                                 bodyparts2plot=bodyparts2plot,
                                 trailpoints=trailpoints,
-                                choose_from_top_or_random=choose_from_top_or_random)
+                                choose_from_top_or_random=choose_from_top_or_random,
+                                overwrite=overwrite)
 
 if __name__ == "__main__":
     FPS = 40
@@ -198,5 +202,6 @@ if __name__ == "__main__":
                 bodyparts2plot=BODYPARTS,
                 trailpoints=TRAILPOINTS,
                 choose_from_top_or_random=TOP_OR_RANDOM,
-                n=filter_noise_max_length
+                n=filter_noise_max_length,
+                overwrite=False
                 )
