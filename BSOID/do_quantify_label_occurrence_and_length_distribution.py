@@ -1,6 +1,6 @@
 # Author: Akira Kudo
 # Created: 2024/04/04
-# Last Updated: 2024/08/23
+# Last Updated: 2024/08/30
 
 import os
 
@@ -65,7 +65,8 @@ if True:
     Q175_SAVE_FOLDER = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\BSOID\Q175\Apr082024\figures"
     YAC_SAVE_FOLDER = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\BSOID\YAC128\Feb232023\figures"
 
-    EXCLUDED_MICE = ["308535m1", "312153m2"]
+    EXCLUDED_MICE = ["308535m1", "312153m2",# YAC HD
+                     "326787m2"] # YAC WT
 
     def is_excluded_mice(path : str, mousenames : list=EXCLUDED_MICE):
         for mousename in mousenames:
@@ -140,7 +141,7 @@ if True:
                                 dtype=np.int32)
 
         NETWORK_NAME = 'Feb-23-2023'
-        YAML_PATH = r'X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\RaymondLab\BSOID\feature_analysis_and_visualization\behavior_groups_Akira_Reviewed.yml'
+        YAML_PATH = r'X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\RaymondLab\BSOID\feature_analysis_and_visualization\behavior_groups_Akira_Reviewed2.yml'
         FILTER_MIN_SIZE = 5
 
         LABEL_LIST = [
@@ -158,13 +159,13 @@ if True:
             ]
         
         # visualize occurrence of meta label between genotypes
-        if True:
+        if False:
             quantify_label_occurrence_and_length_distribution(
                 group_of_labels=METALABEL_LIST,
                 group_names=GROUPNAMES, 
                 use_logscale=False,
                 save_dir=save_folder,
-                save_name=f"Metalabel_Occurrence_{MOUSETYPE}{'separate' if SEPEARATE_WT_AND_HD else ''}_Reviewed.png",
+                save_name=f"Metalabel_Occurrence_{MOUSETYPE}{'separate' if SEPEARATE_WT_AND_HD else ''}_Reviewed2.png",
                 label_to_name=bg.grouping_int_to_grouping_str,
                 save_figure=True,
                 show_figure=False

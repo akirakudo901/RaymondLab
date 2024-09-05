@@ -1,6 +1,6 @@
 # Author: Akira Kudo
 # Created: 2024/04/01
-# Last updated: 2024/08/06
+# Last updated: 2024/09/05
 
 import os
 import shutil
@@ -17,7 +17,8 @@ sys.path.append(r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\Raymond
 sys.path.append(r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\RaymondLab\DeepLabCut")
 
 from BSOID.bsoid_io.utils import read_BSOID_labeled_csv, read_BSOID_labeled_features
-from BSOID.feature_analysis_and_visualization.analysis.analyze_mouse_gait import aggregate_fore_hind_paw_as_one, aggregate_stepsize_per_body_part, analyze_mouse_gait, analyze_mouse_stepsize_per_mousegroup_from_dicts, extract_average_line_between_paw, extract_time_difference_between_consecutive_left_right_contact, filter_stepsize_dict_by_locomotion_to_use, identify_curved_trajectory, remove_outlier_data, FOREPAW, FOREPAW_PAIR, HINDPAW, HINDPAW_PAIR
+from BSOID.feature_analysis_and_visualization.analysis.analyze_mouse_gait import aggregate_fore_hind_paw_as_one, aggregate_stepsize_per_body_part, analyze_consecutive_left_right_contact_time_per_mousegroup, analyze_mouse_gait, analyze_mouse_stepsize_per_mousegroup_from_dicts, extract_average_line_between_paw, extract_mean_and_standard_deviation_of_mouse_step_size, extract_time_difference_between_consecutive_left_right_contact, filter_stepsize_dict_by_locomotion_to_use, identify_curved_trajectory, remove_outlier_data, FOREPAW, FOREPAW_PAIR, HINDPAW, HINDPAW_PAIR
+from BSOID.feature_analysis_and_visualization.analysis.analyze_time_spent_per_label import compare_independent_sample_means
 from BSOID.feature_analysis_and_visualization.visualization.visualize_mouse_gait import filter_nonpawrest_motion, read_stepsize_yaml, select_N_locomotion_sequences, visualize_mouse_gait_speed_of_specific_sequences, visualize_mouse_paw_rests_in_locomomotion, visualize_stepsize_in_locomotion_in_multiple_mice, visualize_time_between_consecutive_landings, COL_START, STEPSIZE_MIN
 from BSOID.label_behavior_bits.preprocessing import filter_bouts_smaller_than_N_frames
 
@@ -215,7 +216,7 @@ def main(label_path : str, dlc_path : str,
             extract_average_line_between_paw(pawrest_df=sequence, savedir=savedir, savename=savename)
 
     
-    if False:
+    if True:
         if sequences is None:
             print("No sequence to analyze for this mouse...")
         else:
@@ -260,16 +261,16 @@ if __name__ == "__main__":
 
     if True: # YAC128
         ABOVE_LABEL_CSVS = [
-            r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\BSOID\YAC128\labeled_features\allcsv_2024_05_16_Akira\HD_filt", 
-            r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\BSOID\YAC128\labeled_features\allcsv_2024_05_16_Akira\WT_filt"
+            r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\SortedForMarja\BSOiD_Feature\csv\YAC128\HD_filt", 
+            r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\SortedForMarja\BSOiD_Feature\csv\YAC128\WT_filt"
         ]
         LABEL_CSVS_PATHS = []; [LABEL_CSVS_PATHS.extend([os.path.join(csv_folder, file) 
                                              for file in os.listdir(csv_folder) if file.endswith('.csv')]) 
                           for csv_folder in ABOVE_LABEL_CSVS]
         
         ABOVE_DLC_CSVS = [
-            r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\DLC\YAC128\csv\all_2024May16_Akira\filt\HD_filt",
-            r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\DLC\YAC128\csv\all_2024May16_Akira\filt\WT_filt"
+            r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\SortedForMarja\DLC_Basic_Analysis\csv\DLC_original\YAC128\filt\HD_filt",
+            r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\SortedForMarja\DLC_Basic_Analysis\csv\DLC_original\YAC128\filt\WT_filt"
         ]
         LABEL_DLC_PATHS = []; [LABEL_DLC_PATHS.extend([os.path.join(csv_folder, file)
                                              for file in os.listdir(csv_folder) if file.endswith('.csv')]) 
@@ -277,8 +278,8 @@ if __name__ == "__main__":
         
         LOCOMOTION_LABEL = [38]
 
-        # SAVEDIR = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\DLC\YAC128\fig\pawInk\{}"
-        SAVEDIR = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\DLC\YAC128\fig\pawInk\fig_workTermReport"
+        SAVEDIR = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\DLC\YAC128\fig\pawInk\{}"
+        # SAVEDIR = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\DLC\YAC128\fig\pawInk\fig_workTermReport"
 
         # the following are for step size analysis
         ABOVE_STEPSIZE_FOLDER = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\DLC\YAC128\fig\pawInk"
@@ -320,6 +321,8 @@ if __name__ == "__main__":
                                       for d in os.listdir(ABOVE_TIME_DIFFERENCE_DIR) 
                                       if (os.path.isdir(os.path.join(ABOVE_TIME_DIFFERENCE_DIR, d)) and 
                                           os.path.exists(os.path.join(ABOVE_TIME_DIFFERENCE_DIR, d, TIME_DIFFERENCE_FILENAME)))]
+        HD_TIME_DIFF_YAMLS = [yaml for yaml in STEP_TIME_DIFFERENCE_YAMLS
+                              if yaml.split() in HD_MICE]
 
     else: # Q175
         ABOVE_LABEL_CSVS = [
@@ -439,11 +442,11 @@ if __name__ == "__main__":
                     sequences=sequences_to_use_for_this_mouse)
     
     # analyze whether the different groups have significant differences 
-    if True:
-        ANALYZE_AGGREGATED_FORE_HIND = False
+    if False:
+        ANALYZE_AGGREGATED_FORE_HIND = True
 
-        if ANALYZE_AGGREGATED_FORE_HIND: 
-            ALL_PAWS = ["forepaw", "hindpaw"]
+        if ANALYZE_AGGREGATED_FORE_HIND:
+            ALL_PAWS = ALL_PAWS + ["forepaw", "hindpaw"]
         
         # obtain all yamls of interest
         wtyaml = [os.path.join(ABOVE_STEPSIZE_FOLDER, folder, yaml) 
@@ -482,7 +485,7 @@ if __name__ == "__main__":
             hddicts = [aggregate_fore_hind_paw_as_one(d) for d in hddicts]
         
         # check for normality with q-q plots / for equality of variances
-        if True:
+        if False:
             SELECTED_SAVEDIR = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\DLC\YAC128\fig\pawInk\selected"
             
             wt_stepsizes = aggregate_stepsize_per_body_part(dictionaries=wtdicts,
@@ -594,6 +597,21 @@ if __name__ == "__main__":
                 save_result=True,
                 save_to=save_path
                 )
+        
+        # extract the mean and standard deviation for step sizes per mouse
+        if False:
+            all_dicts = wtdicts + hddicts
+            all_mousenames = WT_MICE + HD_MICE
+
+            extract_mean_and_standard_deviation_of_mouse_step_size(
+                dicts=all_dicts,
+                mousenames=all_mousenames, 
+                bodyparts=ALL_PAWS,
+                savedir=r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\SortedForMarja\PawInk",
+                savename=f"{HD_GROUPNAME}_MouseStepSize_Mean_SD.csv", 
+                save_result=True
+            )
+
     
         # redefine since we've changed this earlier 
         ALL_PAWS = ["rightforepaw", "righthindpaw", "leftforepaw", "lefthindpaw"]
@@ -609,3 +627,80 @@ if __name__ == "__main__":
             save_figure=True,
             show_figure=False
             )
+    
+    # compare the mean of those time differences between consecutive landings, between groups
+    # if False:
+    #     analyze_consecutive_left_right_contact_time_per_mousegroup(
+    #         group1_dicts : list,
+    #         group2_dicts : list,
+    #         groupnames : list,
+    #         significance=0.05,
+    #         savedir : str,
+    #         savename : str,
+    #         save_result : bool=True,
+    #         show_result : bool=True
+    #     )
+
+    # compute whether the standard deviation & mean per mouse of step sizes would
+    # be different between hd mice and their counterparts
+    # use a csv obtained from running:
+    # extract_mean_and_standard_deviation_of_mouse_step_size
+    if True:
+        MOUSENAME, BODYPART, MEAN, SD = "mousename", "bodypart", "mean", "SD"
+        STEPSIZE_SD_MEAN_CSV = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\SortedForMarja\PawInk\YAC128_MouseStepSize_Mean_SD.csv"
+
+        all_result_txt = ""
+
+        df = pd.read_csv(STEPSIZE_SD_MEAN_CSV)
+
+        data1 = df[np.isin(df[MOUSENAME], HD_MICE)]
+        data2 = df[np.isin(df[MOUSENAME], WT_MICE)]
+
+        groupnames = [HD_GROUPNAME, WT_GROUPNAME]
+
+        unique_bpts = np.unique(df[BODYPART])
+
+        for bpt in unique_bpts:
+            bpt_data1_mean = data1[data1[BODYPART] == bpt][MEAN]
+            bpt_data2_mean = data2[data2[BODYPART] == bpt][MEAN]
+            bpt_data1_mean = bpt_data1_mean[~np.isnan(bpt_data1_mean)]
+            bpt_data2_mean = bpt_data2_mean[~np.isnan(bpt_data2_mean)]
+            
+            bpt_data1_sd = data1[data1[BODYPART] == bpt][SD]
+            bpt_data2_sd = data2[data2[BODYPART] == bpt][SD]
+            bpt_data1_sd = bpt_data1_sd[~np.isnan(bpt_data1_sd)]
+            bpt_data2_sd = bpt_data2_sd[~np.isnan(bpt_data2_sd)]
+
+            all_result_txt += f"\n\nMean for {bpt}:"
+
+            _, _, result_str = compare_independent_sample_means(data1=bpt_data1_mean,
+                data2=bpt_data2_mean,
+                groupnames=groupnames,
+                significance=0.05,
+                savedir=None, savename=None,
+                data_is_normal=False,
+                equal_var=False,
+                save_result=False)
+            all_result_txt += result_str
+
+            all_result_txt += f"\n\nSD for {bpt}:"
+            _, _, result_str = compare_independent_sample_means(data1=bpt_data1_sd,
+                data2=bpt_data2_sd,
+                groupnames=groupnames,
+                significance=0.05,
+                savedir=None, savename=None,
+                data_is_normal=False,
+                equal_var=False,
+                save_result=False)
+            all_result_txt += result_str
+        
+        print(all_result_txt)
+
+        # save result
+        if True:
+            savedir = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\SortedForMarja\PawInk"
+            savename = f"PerMouse_Mean_SD_StepSize_Comparison_{'_'.join(groupnames)}.txt"
+            full_savepath = os.path.join(savedir, savename)
+            
+            with open(full_savepath, 'w') as f:
+                f.write(all_result_txt)
