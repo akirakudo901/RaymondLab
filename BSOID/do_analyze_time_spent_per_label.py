@@ -1,6 +1,6 @@
 # Author: Akira Kudo
 # Created: 2024/04/03
-# Last Updated: 2024/08/23
+# Last Updated: 2024/08/30
 
 import os
 
@@ -9,7 +9,7 @@ import pandas as pd
 import tqdm
 
 from bsoid_io.utils import read_BSOID_labeled_csv, read_BSOID_labeled_features
-from feature_analysis_and_visualization.analysis.analyze_time_spent_per_label import analyze_time_spent_per_label_between_groups, compute_time_spent_per_label, compute_time_spent_per_label_per_group_from_csvs
+from feature_analysis_and_visualization.analysis.analyze_time_spent_per_label import analyze_average_behavior_snippet_length_per_label_per_group, analyze_time_spent_per_label_between_groups, compute_time_spent_per_label, compute_time_spent_per_label_per_group_from_csvs
 from feature_analysis_and_visualization.utils import get_mousename
 from feature_analysis_and_visualization.behavior_groups import BehaviorGrouping
 from label_behavior_bits.preprocessing import filter_bouts_smaller_than_N_frames
@@ -167,7 +167,8 @@ if __name__ == "__main__":
         SIGNIFICANCE = 0.05
         SAVEDIR = r"X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\BSOID\results\framecount_genotype"
 
-        EXCLUDED_MICE = ["308535m1", "312153m2"]
+        EXCLUDED_MICE = ["308535m1", "312153m2",# HD
+                         "326787m2"] #WT
 
         def is_excluded_mice(path : str, mousenames : list=EXCLUDED_MICE):
             for mousename in mousenames:
@@ -175,6 +176,14 @@ if __name__ == "__main__":
                     print(f"File {path} is to be excluded as it matches the mouse name: {mousename}.")
                     return True
             return False
+        
+        def prep_label(csv_path : str, start : int=0, end : int=30*40*60):
+            """
+            Preps csv by reading and extracting label, then truncating the 
+            label to from start to end.
+            """
+            label, _ = read_BSOID_labeled_features(csv_path)
+            return label[start:end+1]
 
         if True: 
             groupnames = ["YAC128", "FVB"]
@@ -196,8 +205,30 @@ if __name__ == "__main__":
                    for file in os.listdir(WT_CSV_DIR) 
                    if (file.endswith(".csv") and not is_excluded_mice(file))]
         
-        # comparison of the original labels
-        if False:
+        def convert_label_to_int_metalabel(label : np.ndarray, 
+                                            behavior_grouping : BehaviorGrouping):
+            return np.fromiter([behavior_grouping.label_to_behavioral_group_int(val) 
+                                for val in label],
+                                dtype=np.int32)
+
+        NETWORK_NAME = 'Feb-23-2023'
+        YAML_PATH = r'X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\RaymondLab\BSOID\feature_analysis_and_visualization\behavior_groups_Akira_Final.yml'
+        FILTER_MIN_SIZE = 5
+        
+        HD_LABELS = [filter_bouts_smaller_than_N_frames(label=prep_label(csv), n=FILTER_MIN_SIZE) 
+                        for csv in HD_CSVS]
+        WT_LABELS = [filter_bouts_smaller_than_N_frames(label=prep_label(csv), n=FILTER_MIN_SIZE) 
+                        for csv in WT_CSVS]
+
+        bg = BehaviorGrouping(network_name=NETWORK_NAME, yaml_path=YAML_PATH)
+        groupings = bg.load_behavior_groupings(network_name=NETWORK_NAME, yaml_path=YAML_PATH)
+
+        # convert the labels into integer meta labels
+        HD_METALABELS = [convert_label_to_int_metalabel(lbl, bg) for lbl in HD_LABELS]
+        WT_METALABELS = [convert_label_to_int_metalabel(lbl, bg) for lbl in WT_LABELS]
+        
+        # comparison of framecounts of the original labels
+        if True:
             SAVENAME = f"framecount_mean_comparison_per_group_per_genotype_{'_'.join(groupnames)}.txt"
 
             analyze_time_spent_per_label_between_groups(group1=HD_CSVS,
@@ -211,33 +242,12 @@ if __name__ == "__main__":
                                                         label_groups=None, 
                                                         save_result=True)
         
-        # comparison in terms of the meta labels
+        # comparison of framecounts of the meta labels
         if True:
-            
-            def convert_label_to_int_metalabel(label : np.ndarray, 
-                                               behavior_grouping : BehaviorGrouping):
-                return np.fromiter([behavior_grouping.label_to_behavioral_group_int(val) 
-                                    for val in label],
-                                    dtype=np.int32)
+            DATA_IS_NORMAL = False
+            testtype = "UnpairedT" if DATA_IS_NORMAL else "MWU"
 
-            NETWORK_NAME = 'Feb-23-2023'
-            YAML_PATH = r'X:\Raymond Lab\2 Colour D1 D2 Photometry Project\Akira\RaymondLab\BSOID\feature_analysis_and_visualization\behavior_groups_Akira_Reviewed.yml'
-            FILTER_MIN_SIZE = 5
-
-            
-            HD_LABELS = [filter_bouts_smaller_than_N_frames(label=read_BSOID_labeled_features(csv)[0], n=FILTER_MIN_SIZE) 
-                         for csv in HD_CSVS]
-            WT_LABELS = [filter_bouts_smaller_than_N_frames(label=read_BSOID_labeled_features(csv)[0], n=FILTER_MIN_SIZE) 
-                         for csv in WT_CSVS]
-
-            bg = BehaviorGrouping(network_name=NETWORK_NAME, yaml_path=YAML_PATH)
-            groupings = bg.load_behavior_groupings(network_name=NETWORK_NAME, yaml_path=YAML_PATH)
-
-            # convert the labels into integer meta labels
-            HD_METALABELS = [convert_label_to_int_metalabel(lbl, bg) for lbl in HD_LABELS]
-            WT_METALABELS = [convert_label_to_int_metalabel(lbl, bg) for lbl in WT_LABELS]
-
-            SAVENAME = f"METALABEL_framecount_mean_comparison_per_group_per_genotype_{'_'.join(groupnames)}_Reviewed.txt"
+            SAVENAME = f"METALABEL_framecount_mean_comparison_per_group_per_genotype_{'_'.join(groupnames)}_{testtype}_Reviewed2.txt"
 
             analyze_time_spent_per_label_between_groups(group1=HD_METALABELS,
                                                         group2=WT_METALABELS,
@@ -245,7 +255,46 @@ if __name__ == "__main__":
                                                         significance=SIGNIFICANCE, 
                                                         savedir=SAVEDIR,
                                                         savename=SAVENAME,
-                                                        data_is_normal=False,
+                                                        data_is_normal=DATA_IS_NORMAL,
                                                         equal_var=False,
                                                         label_groups=None, 
                                                         save_result=True)
+        
+        # comparison of mean length of bouts for each label, across genotypes
+        # first for original labels
+        if True:
+            SAVENAME = f"bout_mean_length_comparison_per_genotype_original_label_{'_'.join(groupnames)}.txt"
+            DATA_IS_NORMAL = False
+            EQUAL_VAR = False
+
+            analyze_average_behavior_snippet_length_per_label_per_group(
+                group1=HD_LABELS,
+                group2=WT_LABELS,
+                groupnames=groupnames,
+                significance=SIGNIFICANCE,
+                savedir=SAVEDIR,
+                savename=SAVENAME,
+                data_is_normal=DATA_IS_NORMAL,
+                equal_var=EQUAL_VAR,
+                label_groups=None, 
+                save_result=True
+                )
+            
+        # then for meta labels
+        if True:
+            SAVENAME = f"bout_mean_length_comparison_per_genotype_meta_label_{'_'.join(groupnames)}.txt"
+            DATA_IS_NORMAL = False
+            EQUAL_VAR = False
+
+            analyze_average_behavior_snippet_length_per_label_per_group(
+                group1=HD_METALABELS,
+                group2=WT_METALABELS,
+                groupnames=groupnames,
+                significance=SIGNIFICANCE,
+                savedir=SAVEDIR,
+                savename=SAVENAME,
+                data_is_normal=DATA_IS_NORMAL,
+                equal_var=EQUAL_VAR,
+                label_groups=None, 
+                save_result=True
+                )

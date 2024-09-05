@@ -1,6 +1,6 @@
 # Author: Akira Kudo
 # Created: 2024/04/02
-# Last Updated: 2024/08/10
+# Last Updated: 2024/08/30
 
 from typing import List
 
@@ -11,7 +11,7 @@ from scipy.stats import mannwhitneyu, ttest_ind
 import tqdm
 
 from bsoid_io.utils import read_BSOID_labeled_csv, read_BSOID_labeled_features
-from feature_analysis_and_visualization.utils import get_mousename
+from feature_analysis_and_visualization.utils import find_runs, get_mousename
 
 MOUSENAME = "mousename"
 GROUPNAME = "groupname"
@@ -301,6 +301,124 @@ def analyze_time_spent_per_label_between_groups(
     
     return (framecount1, percentage1), (framecount2, percentage2), stats, pvals
 
+def analyze_average_behavior_snippet_length_per_label_per_group(
+        group1 : list,
+        group2 : list,
+        groupnames : List[str],
+        significance : float,
+        savedir : str,
+        savename : str,
+        data_is_normal : bool,
+        equal_var : bool,
+        label_groups : List[int]=None, 
+        save_result : bool=True
+        ):
+    """
+    Takes in two lists of labels with corresponding names, extracting how the 
+    length of bouts of each label is varied for each mouse.
+    The mean bout length & standard deviation of bout lengths is computed for each 
+    mouse. These values are then compared using either the Unpaired T-test (if 
+    data_is_normal is True) or the Mann-Whitney U test (if data_is_normal is False).
+
+    :param list group1: The first group as list of csv paths of labels, or 
+    numpy arrays of labels.
+    :param list group2: The second group as list of csv paths of labels, or 
+    numpy arrays of labels.
+    :param List[str] groupnames: A two-string list of the name of the groups 
+    analyzed, used when saving the result.
+    :param float significance: Level of significance used for comparsion.
+    :param str savedir: Directory to which we save analysis results.
+    :param str savename: Name of the file we save analysis results to.
+    :param bool data_is_normal: Whether the data is normal or not. Use
+    unpaired t-test if True, Mann-Whitney U test if False.
+    :param bool equal_var: Whether the data has equal variance or not. 
+    When data is normal, use unpaired t-test if True, and Welch's t-test
+    if False. When data is not normal, has no effect.
+    :param List[int] label_groups: A list of all group labels to 
+    examine for comparion. Defaults to None - all labels.
+    :param bool save_result: Whether to save the analysis results.
+    """
+    if len(groupnames) != 2:
+        raise Exception(f"groupnames must be of length 2, but was instead {len(groupnames)} long...")
+    
+    if type(group1[0]) == str: 
+        group1_labels = [read_BSOID_labeled_csv(csv)[0] for csv in group1]
+    else: group1_labels = group1
+
+    if type(group2[0]) == str: 
+        group2_labels = [read_BSOID_labeled_csv(csv)[0] for csv in group2]
+    else: group2_labels = group2
+
+    def process_labels_by_groups(group_label : list):
+        group_means, group_sd = {}, {}
+        for label in group_label:
+            mean_dict, sd_dict = compute_bout_length_mean_and_sd_per_mouse(label)
+            for unique_label in mean_dict.keys():
+                ul_mean_dict = group_means.get(unique_label, [])
+                ul_mean_dict.append(mean_dict[unique_label])
+                group_means[unique_label] = ul_mean_dict
+            for unique_label in sd_dict.keys():
+                ul_sd_dict = group_sd.get(unique_label, [])
+                ul_sd_dict.append(sd_dict[unique_label])
+                group_sd[unique_label] = ul_sd_dict
+        return group_means, group_sd
+    
+    group1_means, group1_sd = process_labels_by_groups(group1_labels)
+    group2_means, group2_sd = process_labels_by_groups(group2_labels)
+
+    unique_labels = set(group1_means.keys()).union(
+        set(group1_sd.keys()), 
+        set(group2_means.keys()),
+        set(group2_sd.keys())
+        )
+    
+    all_mean_results_txt, all_sd_results_txt = "", ""
+    mean_stats, mean_pvals, sd_stats, sd_pvals = {}, {}, {}, {}
+
+    for lbl in unique_labels:
+        if label_groups is not None and lbl not in label_groups: continue
+        # compare means first
+        statistic, pvalue, mean_result_txt = compare_independent_sample_means(
+            data1=group1_means[lbl], 
+            data2=group2_means[lbl], 
+            groupnames=groupnames,
+            significance=significance,
+            savedir=savedir,
+            savename=savename,
+            data_is_normal=data_is_normal,
+            equal_var=equal_var,
+            save_result=False
+            )
+        
+        all_mean_results_txt += f"Label: {lbl}."
+        all_mean_results_txt += mean_result_txt
+        mean_stats[lbl] = statistic; mean_pvals[lbl] = pvalue
+
+        # then compare standard deviations
+        statistic, pvalue, sd_result_txt = compare_independent_sample_means(
+            data1=group1_sd[lbl], 
+            data2=group2_sd[lbl], 
+            groupnames=groupnames,
+            significance=significance,
+            savedir=savedir,
+            savename=savename,
+            data_is_normal=data_is_normal,
+            equal_var=equal_var,
+            save_result=False
+            )
+        all_sd_results_txt += f"Label: {lbl}."
+        all_sd_results_txt += sd_result_txt
+        sd_stats[lbl] = statistic; sd_pvals[lbl] = pvalue
+    
+    if save_result:
+        mean_savepath = os.path.join(savedir, savename.replace('.', 'Mean.'))
+        with open(mean_savepath, 'w') as f:
+            f.write(all_mean_results_txt)
+        
+        sd_savepath = os.path.join(savedir, savename.replace('.', 'SD.'))
+        with open(sd_savepath, 'w') as f:
+            f.write(all_sd_results_txt)
+
 def extract_framecounts_and_percentages(label_array : list,
                                         label_groups : list=None):
     """
@@ -387,6 +505,29 @@ Result is {'significant!' if significant_result else 'not significant'}: \
         print("SUCCESSFUL!")
 
     return test_res.statistic, test_res.pvalue, all_results_txt
+
+def compute_bout_length_mean_and_sd_per_mouse(label : np.ndarray):
+    """
+    Identifies the lengths of every bout of behavior, and computes both
+    the mean length of such bouts and their standard deviation, for 
+    each unique label in the given label array.
+
+    :param np.ndarray label: The provided label array.
+    :return dict run_length_means: A dictionary mapping each unique label in 
+    the label array to the average length of bouts of that label.
+    :return dict run_length_sd: A dictionary mapping each unique label in 
+    the label array to the standard deviation of length of bouts of that label.
+    """
+    run_length_means, run_length_sd = {}, {}
+
+    run_values, _, run_lengths = find_runs(label)
+
+    for unique_label in np.unique(label):
+        ul_run_lenghts = run_lengths[unique_label == run_values]
+        run_length_means[unique_label.item()] = np.mean(ul_run_lenghts)
+        run_length_sd[unique_label.item()] = np.std(ul_run_lenghts)
+    
+    return run_length_means, run_length_sd
 
 if __name__ == "__main__":
     if False:
