@@ -90,7 +90,8 @@ def create_labeled_behavior_bits(labels,
                                  colormap,
                                  bodyparts2plot,
                                  trailpoints,
-                                 choose_from_top_or_random : str="random"):
+                                 choose_from_top_or_random : str="random",
+                                 overwrite : bool=False):
     """
     :param labels: 1D array, labels from training or testing
     :param crit: scalar, minimum duration for random selection of behaviors (~300ms is advised)
@@ -102,6 +103,8 @@ def create_labeled_behavior_bits(labels,
 
     :param choose_from_top_or_random: Whether to choose 'counts' groups at random or from the 
     top N 'counts' in terms of length. If not "random", chooses the top 'counts'.
+    :param bool overwrite: Whether to overwrite videos that exist already of the same name.
+    Defaults to False.
     """
     EXTRACTED_FRAME_NAME = 'frame.png'
 
@@ -168,6 +171,7 @@ def create_labeled_behavior_bits(labels,
         # get list of images to render, while extracting those we newly need
         img_idx_to_extract = [frame_num for rng in generated_rnges for frame_num in rng
                               if frame_num not in present_img_indices]
+        
         if len(img_idx_to_extract) != 0:
             extract_frame_by_number(input_file=video_path, 
                                     output_file=os.path.join(frame_dir, EXTRACTED_FRAME_NAME),
@@ -185,7 +189,11 @@ def create_labeled_behavior_bits(labels,
 
             for k, rng in enumerate(generated_rnges):
                 video_name = 'group_{}_{}{}.mp4'.format(i, video_name_part, k+1)
-                video = cv2.VideoWriter(os.path.join(subfolder, video_name), fourcc, output_fps, (width, height))
+                video_path = os.path.join(subfolder, video_name)
+
+                if not overwrite and os.path.exists(video_path): continue
+
+                video = cv2.VideoWriter(video_path, fourcc, output_fps, (width, height))
                 for l in rng:
                     image = EXTRACTED_FRAME_NAME.replace('.png', f'{l}.png')
                     read_img = cv2.imread(os.path.join(frame_dir, image))
